@@ -1,6 +1,6 @@
 {
     "name": "boolive/core",
-    "type": "framework",
+    "type": "project",
     "description": "Super flexible framework with prototype model and strong detailing",
     "keywords": ["framework","core"],
     "homepage": "http://boolive.ru",

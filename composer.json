@@ -1,0 +1,24 @@
+{
+    "name": "boolive/core",
+    "type": "framework",
+    "description": "Super flexible framework with prototype model and strong detailing",
+    "keywords": ["framework","core"],
+    "homepage": "http://boolive.ru",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Vladimir Shestakov",
+            "email": "boolive@yandex.ru",
+            "homepage": "http://boolive.ru",
+            "role": "Developer"
+        }
+    ],
+    "require": {
+        "php": ">=5.4.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "": ""
+        }
+    }
+}

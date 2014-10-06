@@ -21,6 +21,8 @@ class Data
         try{
             $data = file_get_contents($file);
             $data = json_decode($data, true);
+            $data['uri'] = $uri;
+            $data['is_exists'] = true;
             $entity = new Entity($data);
         }catch (\Exception $e){
             return false;

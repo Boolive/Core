@@ -10,8 +10,6 @@
 
 namespace boolive\core\values;
 
-use boolive\core\develop\ITrace;
-
 /**
  * Стандартные фильтры к правилу.
  * Методы создания правила с указанием первого фильтра.
@@ -71,7 +69,7 @@ use boolive\core\develop\ITrace;
  * @method \boolive\core\values\Rule uppercase() Преобразует строку в верхний регистр
  * @method \boolive\core\values\Rule condition() Условие поиска или валидации объекта
  */
-class Rule implements ITrace
+class Rule
 {
     /** @var array Фильтры */
     private $filters = array();
@@ -160,7 +158,7 @@ class Rule implements ITrace
         return $this->filters;
     }
 
-    function trace()
+    function __debugInfo()
     {
         return $this->filters;
     }

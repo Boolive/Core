@@ -18,9 +18,8 @@ use IteratorAggregate;
 use ArrayIterator;
 use Countable;
 use boolive\core\errors\Error;
-use boolive\core\develop\ITrace;
 
-class Values implements IteratorAggregate, ArrayAccess, Countable, ITrace
+class Values implements IteratorAggregate, ArrayAccess, Countable
 {
     /** @var mixed|array Значение */
     private $_value;
@@ -557,7 +556,7 @@ class Values implements IteratorAggregate, ArrayAccess, Countable, ITrace
      * Возвращает свойства объекта для трассировки
      * @return array
      */
-    function trace()
+    function __debugInfo()
     {
         return $this->_value;
     }

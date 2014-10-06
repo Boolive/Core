@@ -6,6 +6,7 @@
  */
 namespace boolive\core\data;
 
+use boolive\core\file\File;
 use boolive\core\functions\F;
 use boolive\core\values\Rule;
 use ArrayAccess;
@@ -59,6 +60,11 @@ class Entity implements ArrayAccess
     protected $_author;
     /** @var Entity|bool|null Экземпляр объекта, на который ссылается или false, если нет признака ссылки */
     protected $_link;
+    /** @var Entity|bool|null Экземпляр объекта-прототипа, от которого наследуется значение или false, если значение своё */
+    protected $_def_value;
+    /** @var Entity|bool|null Экземпляр объекта-прототипа, чей класс используется или false, если нет класс свой */
+    protected $_def_class;
+
     /**
      * Признак, требуется ли подобрать уникальное имя перед сохранением или нет?
      * Также означает, что текущее имя (uri) объекта временное
@@ -123,8 +129,8 @@ class Entity implements ArrayAccess
             'proto'        => Rule::any(Rule::uri(), Rule::null()), // URI прототипа
             'author'	   => Rule::any(Rule::uri(), Rule::null()), // Автор (идентификатор объекта-пользователя)
             'order'		   => Rule::int()->max(Entity::MAX_ORDER), // Порядковый номер. Уникален в рамках родителя
-            'date_create'  => Rule::int(), // Дата создания в секундах
-            'date_update'  => Rule::int(), // Дата обновления в секундах
+            'created'      => Rule::int(), // Дата создания в секундах
+            'updated'      => Rule::int(), // Дата обновления в секундах
             'value'	 	   => Rule::string()->max(65535), // Значение до 65535 сиволов
             'is_file'	   => Rule::bool(), // Признак, привязан ли файл?
             'is_draft'	   => Rule::bool(), // Признак, в черновике или нет?
@@ -225,7 +231,7 @@ class Entity implements ArrayAccess
                 $this->_attribs['order'] = Entity::MAX_ORDER;
                 $this->_changes['parent'] = true;
                 $this->_changes['order'] = true;
-                if ($this->isExists()) $this->name(null, true);
+                if ($this->is_exists()) $this->name(null, true);
             }
         }
         if ($return_entity){
@@ -307,125 +313,342 @@ class Entity implements ArrayAccess
         return $this->_attributes['author'];
     }
 
+    /**
+     * Порядковый номер
+     * @param int $new Новое порядковое значение
+     * @return int
+     */
+    function order($new = null)
+    {
+        if (isset($new) && ($this->_attributes['order'] != $new)){
+            $this->_attributes['order'] = (int)$new;
+            $this->_changes['order'] = true;
+        }
+        return $this->_attributes['order'];
+    }
 
+    /**
+     * Дата создания в TIMESTAMP
+     * @param int $new Новая дата создания
+     * @return int
+     */
+    function created($new = null)
+    {
+        if (isset($new) && ($this->_attributes['created'] != $new)){
+            $this->_attributes['created'] = (int)$new;
+            $this->_changes['created'] = true;
+        }
+        return $this->_attributes['created'];
+    }
 
+    /**
+     * Дата последнего изменения в TIMESTAMP
+     * @param int $new Новая дата изменения
+     * @return int
+     */
+    function updated($new = null)
+    {
+        if (isset($new) && ($this->_attributes['updated'] != $new)){
+            $this->_attributes['updated'] = (int)$new;
+            $this->_changes['updated'] = true;
+        }
+        return $this->_attributes['updated'];
+    }
 
-    function order($new)
+    /**
+     * Значение
+     * @param mixed $new Новое значение. Если привязан файл, то имя файла без пути
+     * @return mixed
+     */
+    function value($new = null)
     {
-        if (isset($new) && ($this->_attributes['is_link'] != $new)){
-            $this->_attributes['is_link'] = (bool)$new;
-            $this->_changes['is_link'] = true;
+        if (isset($new) && ($this->_attributes['value'] != $new)){
+            $this->_attributes['value'] = (bool)$new;
+            $this->_changes['value'] = true;
         }
-        return $this->_attributes['is_link'];
+        if (($proto = $this->is_default_value(null, true)) && $proto->is_exists()){
+           return $proto->value();
+        }
+        return $this->_attributes['value'];
     }
-    function created($new)
+
+    /**
+     * Файл, ассоциированный с объектом
+     * @param null|array|string $new Информация о новом файле. Полный путь к новому файлу или сведения из $_FILES
+     * @param bool $root Возвращать полный путь или от директории сайта
+     * @param bool $cache_remote Если файл внешний, то сохранить его к себе на сервер и возвратить путь на него
+     * @return null|string
+     */
+    function file($new = null, $root = false)
     {
-        if (isset($new) && ($this->_attributes['is_link'] != $new)){
-            $this->_attributes['is_link'] = (bool)$new;
-            $this->_changes['is_link'] = true;
+        // Установка нового файла
+        if (isset($new)){
+            if (empty($new)){
+                unset($this->_attributes['file']);
+                $this->_attributes['is_file'] = false;
+            }else{
+                if (is_string($new)){
+                    $new = array(
+                        'tmp_name'	=> $new,
+                        'name' => basename($new),
+                        'size' => @filesize($new),
+                        'error'	=> is_file($new)? 0 : true
+                    );
+                }
+                if (empty($new['name']) && $this->is_file()){
+                    $new['name'] = $this->name().'.'.File::fileExtention($this->file());
+                }
+                $this->_attributes['file'] = $new;
+                $this->_attributes['is_file'] = true;
+            }
+            $this->_attributes['is_default_value'] = false;
+            $this->_changes['value'] = true;
+            $this->_changes['is_file'] = true;
+            $this->_changes['file'] = true;
         }
-        return $this->_attributes['is_link'];
+        // Возврат пути к текущему файлу, если есть
+        if ($this->_attributes['is_file']){
+            if (($proto = $this->is_default_value(null, true)) && $proto->is_exists()){
+                $file = $proto->file(null, $root);
+                return $file;
+            }else{
+                $file = $this->dir($root);
+                return $file.$this->_attributes['value'];
+            }
+        }
+        return null;
     }
-    function updated($new)
+
+    /**
+     * Путь на файл используемого класса (логики)
+     * @param null $new Установка своего класса. Сведения о загружаемом файле или его программный код
+     * @param bool $root Возвращать полный путь или от директории сайта?
+     * @return string
+     */
+    function logic($new = null, $root = false)
     {
-        if (isset($new) && ($this->_attributes['is_link'] != $new)){
-            $this->_attributes['is_link'] = (bool)$new;
-            $this->_changes['is_link'] = true;
+        if (isset($new)){
+            if (is_string($new)){
+                $new = array(
+                    'tmp_name'	=> $new,
+                    'size' => @filesize($new),
+                    'error'	=> is_file($new)? 0 : true
+                );
+            }
+            $this->_attributes['class'] = $new;
+            $this->_attributes['is_default_class'] = false;
+            $this->_changed = true;
+            $this->_checked = false;
         }
-        return $this->_attributes['is_link'];
+        if ($proto = $this->is_default_class(null, true)){
+            $path = $proto->logic(null, $root);
+        }else
+        if ($this->_attributes['is_default_class']) {
+            $path = ($root ? DIR : '/').'vendor/boolive/core/data/Entity.php';
+        }else{
+            $path = $this->dir($root).$this->name().'.php';
+        }
+        return $path;
     }
-    function value($new)
+
+    /**
+     * Директория объекта
+     * @param bool $root Признак, возвращать путь от корня сервера или от web директории (www)
+     * @return string
+     */
+    function dir($root = false)
     {
-        if (isset($new) && ($this->_attributes['is_link'] != $new)){
-            $this->_attributes['is_link'] = (bool)$new;
-            $this->_changes['is_link'] = true;
+        $dir = $this->uri();
+        if ($root){
+            return DIR.$dir.'/';
+        }else{
+            return $dir.'/';
         }
-        return $this->_attributes['is_link'];
     }
-    function is_file($new)
+
+    /**
+     * Признак, привязан ли файл
+     * @param bool $new Новое значение признака
+     * @return bool
+     */
+    function is_file($new = null)
     {
-        if (isset($new) && ($this->_attributes['is_link'] != $new)){
-            $this->_attributes['is_link'] = (bool)$new;
-            $this->_changes['is_link'] = true;
+        if (isset($new) && ($this->_attributes['is_file'] != $new)){
+            $this->_attributes['is_file'] = (bool)$new;
+            $this->_changes['is_file'] = true;
         }
-        return $this->_attributes['is_link'];
+        if (($proto = $this->is_default_value(null, true)) && $proto->is_exists()){
+           return $proto->is_file();
+        }
+        return $this->_attributes['is_file'];
     }
-    function is_draft($new)
+
+    /**
+     * Признак, в черновике ли оъект?
+     * @param bool $new Новое значение признака
+     * @return bool
+     */
+    function is_draft($new = null)
     {
-        if (isset($new) && ($this->_attributes['is_link'] != $new)){
-            $this->_attributes['is_link'] = (bool)$new;
-            $this->_changes['is_link'] = true;
+        if (isset($new) && ($this->_attributes['is_draft'] != $new)){
+            $this->_attributes['is_draft'] = (bool)$new;
+            $this->_changes['is_draft'] = true;
         }
-        return $this->_attributes['is_link'];
+        return $this->_attributes['is_draft'];
     }
-    function is_hidden($new)
+
+    /**
+     * Признак, скрытый ли оъект?
+     * @param bool $new Новое значение признака
+     * @return bool
+     */
+    function is_hidden($new = null)
     {
-        if (isset($new) && ($this->_attributes['is_link'] != $new)){
-            $this->_attributes['is_link'] = (bool)$new;
-            $this->_changes['is_link'] = true;
+        if (isset($new) && ($this->_attributes['is_hidden'] != $new)){
+            $this->_attributes['is_hidden'] = (bool)$new;
+            $this->_changes['is_hidden'] = true;
         }
-        return $this->_attributes['is_link'];
+        return $this->_attributes['is_hidden'];
     }
-    function is_mandatory($new)
+
+    /**
+     * Признак, обязательный ли оъект для наследования?
+     * @param bool $new Новое значение признака
+     * @return bool
+     */
+    function is_mandatory($new = null)
     {
-        if (isset($new) && ($this->_attributes['is_link'] != $new)){
-            $this->_attributes['is_link'] = (bool)$new;
-            $this->_changes['is_link'] = true;
+        if (isset($new) && ($this->_attributes['is_mandatory'] != $new)){
+            $this->_attributes['is_mandatory'] = (bool)$new;
+            $this->_changes['is_mandatory'] = true;
         }
-        return $this->_attributes['is_link'];
+        return $this->_attributes['is_mandatory'];
     }
-    function is_property($new)
+
+    /**
+     * Признак, является ли оъект свойством?
+     * @param bool $new Новое значение признака
+     * @return bool
+     */
+    function is_property($new = null)
     {
-        if (isset($new) && ($this->_attributes['is_link'] != $new)){
-            $this->_attributes['is_link'] = (bool)$new;
-            $this->_changes['is_link'] = true;
+        if (isset($new) && ($this->_attributes['is_property'] != $new)){
+            $this->_attributes['is_property'] = (bool)$new;
+            $this->_changes['is_property'] = true;
         }
-        return $this->_attributes['is_link'];
+        return $this->_attributes['is_property'];
     }
-    function is_relative($new)
+
+    /**
+     * Признак, является ли прототип относительным?
+     * Используется при прототипировании родительского объекта
+     * @param bool $new Новое значение признака
+     * @return bool
+     */
+    function is_relative($new = null)
     {
-        if (isset($new) && ($this->_attributes['is_link'] != $new)){
-            $this->_attributes['is_link'] = (bool)$new;
-            $this->_changes['is_link'] = true;
+        if (isset($new) && ($this->_attributes['is_relative'] != $new)){
+            $this->_attributes['is_relative'] = (bool)$new;
+            $this->_changes['is_relative'] = true;
         }
-        return $this->_attributes['is_link'];
+        return $this->_attributes['is_relative'];
     }
+
     /**
      * Object referenced by this object
      * @param null $new
      * @return mixed
      */
-    function is_link($new)
+    function is_link($new = null, $return_entity = false)
     {
         if (isset($new) && ($this->_attributes['is_link'] != $new)){
             $this->_attributes['is_link'] = (bool)$new;
             $this->_changes['is_link'] = true;
         }
-        return $this->_attributes['is_link'];
-    }
-    function is_default_value($new)
-    {
-        if (isset($new) && ($this->_attributes['is_link'] != $new)){
-            $this->_attributes['is_link'] = (bool)$new;
-            $this->_changes['is_link'] = true;
+        if ($return_entity){
+            if (!isset($this->_link)){
+                if (empty($this->_attributes['is_link'])){
+                    $this->_link = false;
+                }else
+                if (($this->_link = $this->proto(null, true))){
+                    if ($p = $this->_link->is_link(null, true)) $this->_link = $p;
+                }
+            }
+            return $this->_link;
         }
         return $this->_attributes['is_link'];
     }
-    function is_default_class($new)
+
+    /**
+     * Признак, значение наследуется от прототипа?
+     * @param bool $new Новое значение признака
+     * @return bool
+     */
+    function is_default_value($new = null, $return_entity = false)
     {
-        if (isset($new) && ($this->_attributes['is_link'] != $new)){
-            $this->_attributes['is_link'] = (bool)$new;
-            $this->_changes['is_link'] = true;
+        if (isset($new) && ($this->_attributes['is_default_value'] != $new)){
+            $this->_attributes['is_default_value'] = (bool)$new;
+            $this->_changes['is_default_value'] = true;
+            if ($this->_attributes['is_default_value']){
+                $this->_attributes['value'] = null;
+                $this->_attributes['is_file'] = null;
+            }
         }
-        return $this->_attributes['is_link'];
+        if ($return_entity){
+            if (!isset($this->_def_value)){
+                if (empty($this->_attributes['is_default_value'])){
+                    $this->_def_value = false;
+                }else
+                if (($this->_def_value = $this->proto(null, true))){
+                    if ($p = $this->_def_value->is_default_value(null, true)) $this->_def_value = $p;
+                }
+            }
+            return $this->_def_value;
+        }
+        return $this->_attributes['is_default_value'];
     }
+
+    /**
+     * Признак, класс наследуется от прототипа?
+     * @param bool $new Новое значение признака
+     * @return bool
+     */
+    function is_default_class($new = null, $return_entity = false)
+    {
+        if (isset($new) && ($this->_attributes['is_default_class'] != $new)){
+            $this->_attributes['is_default_class'] = (bool)$new;
+            $this->_changes['is_default_class'] = true;
+        }
+        if ($return_entity){
+            if (!isset($this->_def_class)){
+                if (empty($this->_attributes['is_default_class'])){
+                    $this->_def_class = false;
+                }else
+                if (($this->_def_class = $this->proto(null, true))){
+                    if ($p = $this->_def_class->is_default_class(null, true)) $this->_def_class = $p;
+                }
+            }
+            return $this->_def_class;
+        }
+        return $this->_attributes['is_default_class'];
+    }
+
+    /**
+     * Признак, есть ли доступ на оъект?
+     * @return bool
+     */
     function is_accessible()
     {
-        return $this->_attributes['is_link'];
+        return $this->_attributes['is_accessible'];
     }
+
+    /**
+     * Признак, сущесвтует ли оъект?
+     * @return bool
+     */
     function is_exists()
     {
-        return $this->_attributes['is_link'];
+        return $this->_attributes['is_exists'];
     }
 
     ############################################
@@ -507,4 +730,68 @@ class Entity implements ArrayAccess
     #                 Entity                   #
     #                                          #
     ############################################
+
+    /**
+     * Признак, изменены атрибуты объекта или нет
+     * @return bool
+     */
+    function is_changed()
+    {
+        return empty($this->_changes);
+    }
+
+    /**
+     * Вызов несуществующего метода
+     * Если объект внешний, то вызов произведет модуль секции объекта
+     * @param string $method
+     * @param array $args
+     * @return null|void
+     */
+    function __call($method, $args)
+    {
+        return false;
+    }
+
+    /**
+     * При обращении к объекту как к скалярному значению (строке), возвращается значение атрибута value
+     * @example
+     * print $object;
+     * $value = (string)$obgect;
+     * @return mixed
+     */
+    function __toString()
+    {
+        return (string)$this->value();
+    }
+
+    /**
+     * Клонирование объекта
+     */
+    function __clone()
+    {
+        foreach ($this->_properties as $name => $child){
+            $this->_properties[$name] = clone $child;
+        }
+        foreach ($this->_children as $name => $child){
+            $this->_children[$name] = clone $child;
+        }
+    }
+
+    /**
+     * Информация для var_dump() и trace()
+     * @return mixed
+     */
+    public function __debugInfo()
+    {
+        $info['_attributes'] = $this->_attributes;
+        $info['_properties'] = $this->_properties;
+        $info['_changes'] = $this->_changes;
+        $info['_checked'] = $this->_checked;
+//        $info['_proto'] = $this->_proto;
+//        $info['_parent'] = $this->_parent;
+        $info['_children'] = $this->_children;
+
+//        if ($this->_errors) $info['_errors'] = $this->_errors->toArrayCompact(false);
+        return $info;
+    }
 }

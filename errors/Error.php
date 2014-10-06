@@ -18,11 +18,10 @@ namespace boolive\core\errors;
 
 use boolive\core\config\Config;
 use Exception;
-use boolive\core\develop\ITrace;
 use IteratorAggregate;
 use ArrayIterator;
 
-class Error extends Exception implements ITrace, IteratorAggregate
+class Error extends Exception implements IteratorAggregate
 {
     /** @var array Глобальный словарь пользовательских сообщений об ошибках*/
 	private static $global_dictionary;
@@ -396,7 +395,7 @@ class Error extends Exception implements ITrace, IteratorAggregate
         //}
     }
 
-    function trace()
+    function __debugInfo()
     {
         $trace = array();
         $trace['code'] = $this->getCode();

@@ -282,13 +282,13 @@ class Trace
 
     /**
      * Преобразование объекта в массив
-     * @param object|ITrace $object
+     * @param object $object
      * @return array
      */
     static private function objToArray(&$object)
     {
-        if ($object instanceof ITrace){
-            $arr = $object->trace();
+        if (is_object($object) && method_exists($object, '__debugInfo')){
+            $arr = $object->__debugInfo();
             if (!is_array($arr)) return $arr;
         }else{
             $arr = (array)$object;

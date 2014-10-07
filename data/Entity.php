@@ -39,14 +39,14 @@ class Entity implements ArrayAccess
         'is_relative'  => false,
         'is_link'      => false,
         'is_default_value' => false,
-        'is_default_class' => true,
+        'is_default_logic' => true,
         //'is_completed' => false,
         'is_accessible'=> true,
         'is_exists'    => false,
     );
     /** @var array of Entity Свойства объекта. */
     protected $_properties = array();
-    /** @var array of Entity Подчиненные объекты */
+    /** @var array of Entity Подчиненные объекты не являющиеся свойствами */
     protected $_children = array();
     /** @var array Названия измененных атрибутов */
     protected $_changes = array();
@@ -58,21 +58,19 @@ class Entity implements ArrayAccess
     protected $_proto;
     /** @var Entity|bool|null Экземпляр автора объекта или false, если нет автора */
     protected $_author;
-    /** @var Entity|bool|null Экземпляр объекта, на который ссылается или false, если нет признака ссылки */
+    /** @var Entity|bool|null Экземпляр объекта-прототипа, на который ссылается или false, если нет признака ссылки */
     protected $_link;
     /** @var Entity|bool|null Экземпляр объекта-прототипа, от которого наследуется значение или false, если значение своё */
     protected $_def_value;
     /** @var Entity|bool|null Экземпляр объекта-прототипа, чей класс используется или false, если нет класс свой */
-    protected $_def_class;
-
+    protected $_def_logic;
     /**
      * Признак, требуется ли подобрать уникальное имя перед сохранением или нет?
-     * Также означает, что текущее имя (uri) объекта временное
      * Если строка, то определяет базовое имя, к кторому будут подбираться числа для уникальности
      * @var bool|string
      */
     protected $_auto_naming = false;
-    /** @var string Тенкущение имя перед сохранением, если изменялось */
+    /** @var string Текущее имя перед сохранением, если изменялось */
     protected $_current_name;
 
     /**
@@ -101,7 +99,7 @@ class Entity implements ArrayAccess
                 if (isset($this->_attributes['uri'])){
                     $prop['uri'] = $this->_attributes['uri'].'/'.$name;
                 }
-                $this->_properties[$name] = new Entity($prop);
+                $this->_properties[$name] = Data::entity($prop);
                 $this->_properties[$name]->_parent = $this;
             }
             unset($info['properties']);
@@ -141,7 +139,7 @@ class Entity implements ArrayAccess
 //            'is_completed' => Rule::bool(), // Признак, дополнен объект свойствами прототипа или нет?
             'is_link'      => Rule::bool(), // Ссылка или нет?
             'is_default_value' => Rule::bool(), // Признак, используется значение прототипа или своё?
-            'is_default_class' => Rule::bool(), // Признак, используется класс прототипа или свой?
+            'is_default_logic' => Rule::bool(), // Признак, используется класс прототипа или свой?
             // Сведения о загружаемом файле. Не является атрибутом объекта, но используется при сохранении
             'file'	=> Rule::arrays(array(
                 'tmp_name'	=> Rule::string(), // Путь на связываемый файл
@@ -152,7 +150,7 @@ class Entity implements ArrayAccess
                 'content'   => Rule::string()
             )),
             // Сведения о классе объекта (загружаемый файл или программный код). Не является атрибутом объекта
-            'class' => Rule::arrays(array(
+            'logic' => Rule::arrays(array(
                 'content'   => Rule::string(), // Программный код класса
                 'tmp_name'	=> Rule::string(), // Путь на файл, если класс загржается в виде файла
                 'size'		=> Rule::int(), // Размер в байтах
@@ -205,7 +203,7 @@ class Entity implements ArrayAccess
             $new = preg_replace('/\s/ui','_',$new);
             // Запоминаем текущее имя
             if (!isset($this->_current_name)) $this->_current_name = $this->_attributes['name'];
-            if ($choose_unique) $this->_automnaming = $new;
+            if ($choose_unique) $this->_auto_naming = $new;
             $this->_attributes['name'] = $new;
         }
         return $this->_attributes['name'];
@@ -213,7 +211,7 @@ class Entity implements ArrayAccess
 
     /**
      * Parent of this object
-     * @param null|string|Entity $new New parent
+     * @param null|string|Entity $new New parent. URI or object
      * @param bool $return_entity Признак, возвращать объект вместо uri
      * @return string|Entity|false
      */
@@ -228,7 +226,7 @@ class Entity implements ArrayAccess
             }
             if ($new != $this->_attributes['parent']){
                 $this->_attributes['parent'] = $new;
-                $this->_attribs['order'] = Entity::MAX_ORDER;
+                $this->_attributes['order'] = Entity::MAX_ORDER;
                 $this->_changes['parent'] = true;
                 $this->_changes['order'] = true;
                 if ($this->is_exists()) $this->name(null, true);
@@ -249,7 +247,7 @@ class Entity implements ArrayAccess
 
     /**
      * Prototype of this object
-     * @param null|string|Entity $new Новый прототип
+     * @param null|string|Entity $new Новый прототип. URI или объект
      * @param bool $return_entity Признак, возвращать объект вместо uri
      * @return string|Entity|false
      */
@@ -282,8 +280,8 @@ class Entity implements ArrayAccess
 
     /**
      * Author of this object
-     * @param null $new
-     * @param bool $return_entity
+     * @param null|string|Entity $new Новый автор. URI или объект
+     * @param bool $return_entity Признак, возвращать объект вместо uri
      * @return mixed
      */
     function author($new = null, $return_entity = false)
@@ -376,7 +374,6 @@ class Entity implements ArrayAccess
      * Файл, ассоциированный с объектом
      * @param null|array|string $new Информация о новом файле. Полный путь к новому файлу или сведения из $_FILES
      * @param bool $root Возвращать полный путь или от директории сайта
-     * @param bool $cache_remote Если файл внешний, то сохранить его к себе на сервер и возвратить путь на него
      * @return null|string
      */
     function file($new = null, $root = false)
@@ -405,6 +402,7 @@ class Entity implements ArrayAccess
             $this->_changes['value'] = true;
             $this->_changes['is_file'] = true;
             $this->_changes['file'] = true;
+            $this->_changes['is_default_value'] = true;
         }
         // Возврат пути к текущему файлу, если есть
         if ($this->_attributes['is_file']){
@@ -435,15 +433,15 @@ class Entity implements ArrayAccess
                     'error'	=> is_file($new)? 0 : true
                 );
             }
-            $this->_attributes['class'] = $new;
-            $this->_attributes['is_default_class'] = false;
-            $this->_changed = true;
-            $this->_checked = false;
+            $this->_attributes['logic'] = $new;
+            $this->_attributes['is_default_logic'] = false;
+            $this->_changes['is_default_logic'] = true;
+            $this->_changes['logic'] = true;
         }
-        if ($proto = $this->is_default_class(null, true)){
+        if ($proto = $this->is_default_logic(null, true)){
             $path = $proto->logic(null, $root);
         }else
-        if ($this->_attributes['is_default_class']) {
+        if ($this->_attributes['is_default_logic']) {
             $path = ($root ? DIR : '/').'vendor/boolive/core/data/Entity.php';
         }else{
             $path = $this->dir($root).$this->name().'.php';
@@ -556,8 +554,9 @@ class Entity implements ArrayAccess
 
     /**
      * Object referenced by this object
-     * @param null $new
-     * @return mixed
+     * @param null|bool $new Новое значение признака
+     * @param bool $return_entity Признак, возвращать объект вместо uri
+     * @return bool||Entity
      */
     function is_link($new = null, $return_entity = false)
     {
@@ -582,7 +581,8 @@ class Entity implements ArrayAccess
     /**
      * Признак, значение наследуется от прототипа?
      * @param bool $new Новое значение признака
-     * @return bool
+     * @param bool $return_entity Признак, возвращать объект вместо uri
+     * @return bool|Entity
      */
     function is_default_value($new = null, $return_entity = false)
     {
@@ -609,28 +609,29 @@ class Entity implements ArrayAccess
     }
 
     /**
-     * Признак, класс наследуется от прототипа?
+     * Признак, класс (которым определяется логика объекта) наследуется от прототипа?
      * @param bool $new Новое значение признака
-     * @return bool
+     * @param bool $return_entity Признак, возвращать объект вместо uri
+     * @return bool|Entity
      */
-    function is_default_class($new = null, $return_entity = false)
+    function is_default_logic($new = null, $return_entity = false)
     {
-        if (isset($new) && ($this->_attributes['is_default_class'] != $new)){
-            $this->_attributes['is_default_class'] = (bool)$new;
-            $this->_changes['is_default_class'] = true;
+        if (isset($new) && ($this->_attributes['is_default_logic'] != $new)){
+            $this->_attributes['is_default_logic'] = (bool)$new;
+            $this->_changes['is_default_logic'] = true;
         }
         if ($return_entity){
-            if (!isset($this->_def_class)){
-                if (empty($this->_attributes['is_default_class'])){
-                    $this->_def_class = false;
+            if (!isset($this->_def_logic)){
+                if (empty($this->_attributes['is_default_logic'])){
+                    $this->_def_logic = false;
                 }else
-                if (($this->_def_class = $this->proto(null, true))){
-                    if ($p = $this->_def_class->is_default_class(null, true)) $this->_def_class = $p;
+                if (($this->_def_logic = $this->proto(null, true))){
+                    if ($p = $this->_def_logic->is_default_logic(null, true)) $this->_def_logic = $p;
                 }
             }
-            return $this->_def_class;
+            return $this->_def_logic;
         }
-        return $this->_attributes['is_default_class'];
+        return $this->_attributes['is_default_logic'];
     }
 
     /**

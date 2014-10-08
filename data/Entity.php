@@ -99,6 +99,16 @@ class Entity implements ArrayAccess
                 if (isset($this->_attributes['uri'])){
                     $prop['uri'] = $this->_attributes['uri'].'/'.$name;
                 }
+                // Если у свойства нет прототипа, то определение прототипа через прототипы родителей
+                if (!isset($prop['proto']) && isset($info['proto'])){
+                    $p = Data::read($info['proto']);
+                    do{
+                        $property = $p->{$name};
+                    }while (!$property && ($p = $p->proto()));
+                    if ($property){
+                        $prop['proto'] = $property->uri();
+                    }
+                }
                 $this->_properties[$name] = Data::entity($prop);
                 $this->_properties[$name]->_parent = $this;
             }
@@ -660,7 +670,11 @@ class Entity implements ArrayAccess
 
     public function __get($name)
     {
-
+        if (isset($this->_properties[$name])){
+            return $this->_properties[$name];
+        }else{
+            return false;
+        }
     }
 
     public function __set($name, $prop)

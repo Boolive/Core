@@ -8,7 +8,7 @@
  * Trace::group()->group('db')->group('query')->set($sql); // ...альтернативное указание групп
  * Trace::group()->db->out(); // Вывод группы db
  * Trace::group()->out(); // Вывод всех трассировок
- * @version 1.3
+ * @version 2.0
  * @author Vladimir Shestakov <boolive@yandex.ru>
  */
 namespace boolive\core\develop;
@@ -176,6 +176,11 @@ class Trace
         return $html ? '<span style="'.$style.'">'.$var.'</span>' : $var;
     }
 
+    static private function style_keyword($str, $html = true)
+    {
+        return $html ? '<span style="color:#252FFF;">'.$str.'</span>' : $str;
+    }
+
     /**
      * Форматирование значения
      *
@@ -185,25 +190,28 @@ class Trace
      * @param bool $html Форматировать в html?
      * @return string
      */
-    static function format($var, &$trace_buf = array(), $pfx = '  ', $html = true)
+    static function format($var, &$trace_buf = array(), $pfx = '', $html = true)
     {
-        $sp = '| ';
-        $sp3 = '  ';
+        $sp  = $html?'<span style="color:#ddd">|</span>   ':'|   ';
+        $back = strlen($sp);
         $out = '';
         if ($var instanceof Trace){
-            /*if (is_string($var->key))*/ $out.= '# '.$var->key."\n";
+            if (is_string($var->key)){
+                $out.= '# '.$var->key."\n";
+                if (empty($pfx)) $pfx = str_repeat(' ',strlen(strip_tags($sp)));
+            }
             if (empty($var->children)){
-                $out.= $pfx.self::format($var->value, $trace_buf, $pfx.$sp3, $html);
+                $out.= $pfx.self::format($var->value, $trace_buf, $pfx.$sp, $html);
             }else{
                 if (isset($var->value)){
-                    $out.= $pfx.self::format($var->value, $trace_buf, $pfx, $html)."\n";
+                    $out.= $pfx.self::format($var->value, $trace_buf, $pfx.$sp, $html)."\n";
                 }
                 $cnt = sizeof($var->children);
                 foreach ($var->children as $var){
                     $cnt--;
-                    $out.= $pfx.self::format($var, $trace_buf, ($cnt?$pfx.$sp:$pfx.$sp3), $html)."\n";
+                    $out.= $pfx.self::format($var, $trace_buf, $pfx.$sp, $html)."\n";
                 }
-                return rtrim($out);
+                return $out;
             }
         }else
         // если не определена или null
@@ -216,45 +224,39 @@ class Trace
         }else
         // если ресурс
         if (is_resource($var)){
-            $out.= '{resource}';
+            $out.= self::style_keyword('resource', $html);
         }else
         // если массив
         if (is_array($var)){
             $cnt = sizeof($var);
             if ($cnt == 0){
-                $out.='{Array} ()';
+                $out.='[]';
             }else{
-                $out.= '{Array}';
+                $out.= '[';
                 foreach ($var as $name => $value){
                     $cnt--;
-                    if ($cnt){
-                        $new_pfx = $pfx.' '.$sp;
-                    }else{
-                        $new_pfx = $pfx.' '.$sp3;
-                    }
-                    $out.= "\n".$pfx.'['.self::style($name, $html).'] => '.self::format($value, $trace_buf, $new_pfx, $html);
+                    $new_pfx = $pfx.$sp;
+                    $out.= "\n".$pfx.self::style($name, $html).' => '.self::format($value, $trace_buf, $new_pfx, $html).',';
                 }
+                $out = rtrim($out,',');
+                $out.= "\n".substr($pfx,0,strlen($pfx)-$back).']';
             }
         }else
         // Если объект
         if (is_object($var)){
             $class_name = get_class($var);
             if (isset($trace_buf[spl_object_hash($var)])){
-                //if ($var instanceof \boolive\core\data\Entity){
-                //	$list = array('id' => $var['id'], 'name'=> $var->name());
-                //}else{
-                //	$list = array();
-                //}
-                $out.='{'.$class_name.'} уже отображен';
+                $out.=self::style_keyword('class',$html).' '.$class_name.' уже отображен';
             }else{
                 $trace_buf[spl_object_hash($var)] = true;
-                $out.= '{'.$class_name.'}';
+                $out.= self::style_keyword('class',$html).' '.$class_name.'';
                 while ($class_name = get_parent_class($class_name)){
-                    $out.= ' -> {'.$class_name.'}';
+                    $out.= ' '.self::style_keyword('extends',$html).' '.$class_name.'';
                 }
                 $list = self::objToArray($var);
             }
             if (isset($list)){
+                $out.= "\n".substr($pfx,0,strlen($pfx)-$back).'{';
                 if (!is_array($list)){
                     $out.= "\n".$pfx.self::format($list, $trace_buf, $pfx, $html);
                 }else{
@@ -262,15 +264,12 @@ class Trace
                     if ($cnt > 0){
                         foreach ($list as $name => $value){
                             $cnt--;
-                            if ($cnt){
-                                $new_pfx = $pfx.' '.$sp;
-                            }else{
-                                $new_pfx = $pfx.' '.$sp3;
-                            }
-                            $out.= "\n".$pfx.'['.$name.'] => '.self::format($value, $trace_buf, $new_pfx, $html);
+                            $new_pfx = $pfx.$sp;
+                            $out.= "\n".$pfx.$name.' = '.self::format($value, $trace_buf, $new_pfx, $html).';';
                         }
                     }
                 }
+                $out.= "\n".substr($pfx,0,strlen($pfx)-$back).'}';
             }
         }
         // Иначе

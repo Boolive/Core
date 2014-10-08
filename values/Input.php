@@ -13,7 +13,7 @@
  * @version 1.0
  * @author Vladimir Shestakov <boolive@yandex.ru>
  */
-namespace boolive\core\input;
+namespace boolive\core\values;
 
 use boolive\core\values\Values;
 use boolive\core\functions\F;
@@ -28,7 +28,7 @@ use boolive\core\functions\F;
  */
 class Input extends Values
 {
-    /** @var \boolive\core\input\Input Общий контейнер всех входящих данных */
+    /** @var \boolive\core\values\Input Общий контейнер всех входящих данных */
     private static $input;
 
     /**

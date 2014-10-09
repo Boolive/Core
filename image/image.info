@@ -1,0 +1,20 @@
+{
+    "value": "Image.png",
+    "is_file": true,
+    "proto": "/vendor/boolive/basic/file",
+    "order": 28,
+    "properties": {
+        "title": {
+            "value": "Изображение",
+            "proto": "/vendor/boolive/basic/file/title"
+        },
+        "description": {
+            "value": "Файл изображения",
+            "proto": "/vendor/boolive/basic/file/description"
+        },
+        "extentions": {
+            "value": "*.png *.jpg *.gif *.ico",
+            "proto": "/vendor/boolive/basic/file/extentions"
+        }
+    }
+}

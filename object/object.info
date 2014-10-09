@@ -1,0 +1,46 @@
+{
+    "value": "",
+    "order": 1,
+    "properties": {
+        "title": {
+            "value": "Объект",
+            "proto": "/vendor/boolive/basic/string",
+            "is_mandatory": true,
+            "is_property": true,
+            "properties": {
+                "title": {
+                    "value": "Название",
+                    "proto": "/vendor/boolive/basic/string/title"
+                },
+                "description": {
+                    "value": "Название должно содержать смысл и быть коротким",
+                    "proto": "/vendor/boolive/basic/string/description"
+                }
+            }
+        },
+        "description": {
+            "value": "Простейший объект",
+            "proto": "/vendor/boolive/basic/Text",
+            "properties": {
+                "title": {
+                    "value": "Описание",
+                    "proto": "/vendor/boolive/basic/text/title"
+                },
+                "description": {
+                    "value": "Краткое описание, дополняющее название",
+                    "proto": "/vendor/boolive/basic/text/description"
+                }
+            }
+        },
+        "icon": {
+            "proto": "/vendor/boolive/basic/image",
+            "is_draft": true,
+            "properties": {
+                "title": {
+                    "value": "Иконка",
+                    "proto": "/vendor/boolive/basic/image/title"
+                }
+            }
+        }
+    }
+}

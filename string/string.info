@@ -1,0 +1,9 @@
+{
+    "value": "",
+    "proto": "/vendor/boolive/basic/object",
+    "order": 8,
+    "properties": {
+        "title": "Строка",
+        "description": "Строковое значение длиной 255 символов"
+    }
+}

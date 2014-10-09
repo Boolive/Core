@@ -88,6 +88,7 @@ class Entity implements ArrayAccess
         }
         if (isset($info['properties'])){
             foreach ($info['properties'] as $name => $prop){
+                if (is_scalar($prop)) $prop = array('name' => $name);
                 $prop['name'] = $name;
                 $prop['is_property'] = true;
                 if (!isset($prop['created']) && isset($info['created'])) $prop['created'] = $info['created'];

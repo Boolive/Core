@@ -15,6 +15,7 @@
  */
 namespace boolive\core\values;
 
+use boolive\core\IActivate;
 use boolive\core\values\Values;
 use boolive\core\functions\F;
 
@@ -26,7 +27,7 @@ use boolive\core\functions\F;
  * @property \boolive\core\values\Values RAW Неформатированные данные
  * @property \boolive\core\values\Values SERVER Информация о сервере и среде исполнения
  */
-class Input extends Values
+class Input extends Values implements IActivate
 {
     /** @var \boolive\core\values\Input Общий контейнер всех входящих данных */
     private static $input;

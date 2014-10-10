@@ -72,7 +72,7 @@ namespace boolive\core {
             if ($file = self::$loader->findFile($class_name)) {
                 self::$included[$class_name] = $class_name;
                 \Composer\Autoload\includeFile($file);
-                if (method_exists($class_name, 'activate')) {
+                if (isset(class_implements($class_name, false)['boolive\core\IActivate'])) {
                     self::$activated[$class_name] = $class_name;
                     $class_name::activate();
                 }

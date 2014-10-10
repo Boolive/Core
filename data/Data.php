@@ -11,10 +11,14 @@ use boolive\core\functions\F;
 
 class Data
 {
+    /**
+     * @param $uri
+     * @return bool|Entity
+     */
     static function read($uri)
     {
         if ($uri === ''){
-            $file = DIR.'site.info';
+            $file = DIR.'project.info';
         }else{
             $file = DIR.trim($uri,'/').'/'.File::fileName($uri).'.info';
         }
@@ -59,7 +63,7 @@ class Data
                         $namespace = str_replace('/', '\\', rtrim($info['uri'],'/'));
                         // Свой класс
                         if (empty($namespace)){
-                            $class = '\\site';
+                            $class = '\\project';
                         }else
                         if (substr($namespace,0,7) === '\\vendor'){
                             $class = substr($namespace,7).'\\'.basename($namespace);

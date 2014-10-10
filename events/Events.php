@@ -10,8 +10,9 @@ namespace boolive\core\events;
 
 use boolive\core\Core;
 use boolive\core\config\Config;
+use boolive\core\IActivate;
 
-class Events
+class Events implements IActivate
 {
     /** @var array Реестр обработчиков событий */
     private static $handlers = array();

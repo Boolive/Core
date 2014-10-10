@@ -7,8 +7,9 @@
 namespace boolive\core\file;
 
 use boolive\core\functions\F;
+use boolive\core\IActivate;
 
-class File
+class File implements IActivate
 {
     const VIRT_DISK = 'B';
     static private $IS_WIN = false;

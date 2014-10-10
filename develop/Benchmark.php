@@ -9,7 +9,9 @@
  */
 namespace boolive\core\develop;
 
-class Benchmark
+use boolive\core\IActivate;
+
+class Benchmark implements IActivate
 {
     /** @var array Начальные значения замеров */
     static private $start = array();

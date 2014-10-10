@@ -11,7 +11,7 @@ use boolive\core\functions\F;
 use boolive\core\values\Rule;
 use ArrayAccess;
 
-class Entity implements ArrayAccess
+class Entity
 {
     /** @const int Максимальное порядковое значение */
     const MAX_ORDER = 4294967295;
@@ -44,9 +44,7 @@ class Entity implements ArrayAccess
         'is_accessible'=> true,
         'is_exists'    => false,
     );
-    /** @var array of Entity Свойства объекта. */
-    protected $_properties = array();
-    /** @var array of Entity Подчиненные объекты не являющиеся свойствами */
+    /** @var array of Entity Подчиненные объекты */
     protected $_children = array();
     /** @var array Названия измененных атрибутов */
     protected $_changes = array();
@@ -86,34 +84,34 @@ class Entity implements ArrayAccess
                 $info['parent'] = $names[0];
             }
         }
-        if (isset($info['properties'])){
-            foreach ($info['properties'] as $name => $prop){
-                if (is_scalar($prop)) $prop = array('name' => $name);
-                $prop['name'] = $name;
-                $prop['is_property'] = true;
-                if (!isset($prop['created']) && isset($info['created'])) $prop['created'] = $info['created'];
-                if (!isset($prop['updated']) && isset($info['updated'])) $prop['updated'] = $info['updated'];
-                $prop['is_exists'] = $info['is_exists'];
+        if (isset($info['children'])){
+            foreach ($info['children'] as $name => $child){
+                if (is_scalar($child)) $child = array('name' => $name);
+                $child['name'] = $name;
+                $child['is_property'] = true;
+                if (!isset($child['created']) && isset($info['created'])) $child['created'] = $info['created'];
+                if (!isset($child['updated']) && isset($info['updated'])) $child['updated'] = $info['updated'];
+                $child['is_exists'] = $info['is_exists'];
                 if (isset($info['uri'])){
-                    $prop['uri'] = $info['uri'].'/'.$name;
+                    $child['uri'] = $info['uri'].'/'.$name;
                 }else
                 if (isset($this->_attributes['uri'])){
-                    $prop['uri'] = $this->_attributes['uri'].'/'.$name;
+                    $child['uri'] = $this->_attributes['uri'].'/'.$name;
                 }
                 // Если у свойства нет прототипа, то определение прототипа через прототипы родителей
-                if (!isset($prop['proto']) && isset($info['proto'])){
+                if (!isset($child['proto']) && isset($info['proto'])){
                     $p = Data::read($info['proto']);
                     do{
                         $property = $p->{$name};
                     }while (!$property && ($p = $p->proto()));
                     if ($property){
-                        $prop['proto'] = $property->uri();
+                        $child['proto'] = $property->uri();
                     }
                 }
-                $this->_properties[$name] = Data::entity($prop);
-                $this->_properties[$name]->_parent = $this;
+                $this->_children[$name] = Data::entity($child);
+                $this->_children[$name]->_parent = $this;
             }
-            unset($info['properties']);
+            unset($info['children']);
         }
         $this->_attributes = array_replace($this->_attributes, $info);
     }
@@ -669,23 +667,26 @@ class Entity implements ArrayAccess
     #                                          #
     ############################################
 
+    /**
+     * @param $name
+     * @return Entity|bool
+     */
     public function __get($name)
     {
-        if (isset($this->_properties[$name])){
-            return $this->_properties[$name];
-        }else{
-            return false;
+        if (!isset($this->_children[$name])){
+            $this->_children[$name] = Data::read($this->uri().'/'.$name);
         }
+        return $this->_children[$name];
     }
 
-    public function __set($name, $prop)
+    public function __set($name, $child)
     {
 
     }
 
     public function __isset($name)
     {
-
+        return $this;
     }
 
     public function __unset($name)
@@ -693,52 +694,9 @@ class Entity implements ArrayAccess
 
     }
 
-    public function properties($cond = array())
+    public function children($cond = array())
     {
 
-    }
-
-    ############################################
-    #                                          #
-    #               Children                   #
-    #                                          #
-    ############################################
-
-    /**
-     * @param mixed $offset
-     * @return boolean true on success or false on failure.
-     */
-    public function offsetExists($offset)
-    {
-        // TODO: Implement offsetExists() method.
-    }
-
-    /**
-     * @param mixed $offset
-     * @return mixed Can return all value types.
-     */
-    public function offsetGet($offset)
-    {
-        // TODO: Implement offsetGet() method.
-    }
-
-    /**
-     * @param mixed $offset
-     * @param mixed $value
-     * @return void
-     */
-    public function offsetSet($offset, $value)
-    {
-        // TODO: Implement offsetSet() method.
-    }
-
-    /**
-     * @param mixed $offset
-     * @return void
-     */
-    public function offsetUnset($offset)
-    {
-        // TODO: Implement offsetUnset() method.
     }
 
     ############################################
@@ -785,9 +743,6 @@ class Entity implements ArrayAccess
      */
     function __clone()
     {
-        foreach ($this->_properties as $name => $child){
-            $this->_properties[$name] = clone $child;
-        }
         foreach ($this->_children as $name => $child){
             $this->_children[$name] = clone $child;
         }
@@ -800,7 +755,6 @@ class Entity implements ArrayAccess
     public function __debugInfo()
     {
         $info['_attributes'] = $this->_attributes;
-        $info['_properties'] = $this->_properties;
         $info['_changes'] = $this->_changes;
         $info['_checked'] = $this->_checked;
 //        $info['_proto'] = $this->_proto;

@@ -16,7 +16,6 @@
 namespace boolive\core\values;
 
 use boolive\core\IActivate;
-use boolive\core\values\Values;
 use boolive\core\functions\F;
 
 /**
@@ -147,7 +146,7 @@ class Input extends Values implements IActivate
 
     /**
      * Все входящие данные
-     * @return \boolive\core\input\Input
+     * @return \boolive\core\values\Input
      */
     static function ALL()
     {

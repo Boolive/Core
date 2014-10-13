@@ -29,6 +29,8 @@
  */
 namespace boolive\core\values;
 
+use boolive\core\data\Data;
+use boolive\core\data\Entity;
 use boolive\core\events\Events;
 //use boolive\core\data\Entity;
 //use boolive\core\data\Data2;
@@ -341,34 +343,35 @@ class Check
             }
             if (is_string($value)){
                 // Пробуем получить объект по uri
-                $value = Data2::read($value.'&cache=2');
+                $value = Data::read($value);
             }else
             if (is_array($value)){
-                if (isset($value['id'])){
-                    $value = Data2::read($value['id'].'&cache=2');
-                }else
+//                if (isset($value['id'])){
+//                    $value = Data::read($value['id']);
+//                }else
                 if (isset($value['uri'])){
-                    $value = Data2::read($value['uri'].'&cache=2');
-                }else
-                if (isset($value['proto'])){
-                    $value = Data2::read($value['proto'])->birth();
-                    if (isset($value['parent']) && $parent = Data2::read($value['parent'])){
-                        $parent->__set(null, $value);
-                    }
+                    $value = Data::read($value['uri']);
                 }
-                unset($value['uri'], $value['proto'], $value['value']);
+//                else
+//                if (isset($value['proto'])){
+//                    $value = Data::read($value['proto'])->birth();
+//                    if (isset($value['parent']) && $parent = Data::read($value['parent'])){
+//                        $parent->__set(null, $value);
+//                    }
+//                }
+//                unset($value['uri'], $value['proto'], $value['value']);
             }
         }
         if (!$value instanceof Entity){
             $error = new Error('Не является объектом данных "\boolive\core\data\Entity"', 'entity');
         }else
-        if (!empty($cond) && !$value->verify($cond)){
-            $error = new Error('Объект не соответсвует заданному условию', 'entity');
-        }else
+//        if (!empty($cond) && !$value->verify($cond)){
+//            $error = new Error('Объект не соответсвует заданному условию', 'entity');
+//        }else
 //        if (!$value->isExist()){
 //            $error = new Error('Объект не существует', 'entity');
 //        }else
-        if (!$value->isAccessible()){
+        if (!$value->is_accessible()){
             $error = new Error('Объект недоступен для чтения', 'entity');
         }else{
             return $value;

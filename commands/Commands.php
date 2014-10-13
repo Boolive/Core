@@ -135,7 +135,7 @@ class Commands
      * @param string $name Название команды
      * @return bool
      */
-    function isExist($name = null)
+    function isExists($name = null)
     {
         if (empty($name)){
             return !empty($this->commands);

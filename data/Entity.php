@@ -38,7 +38,7 @@ class Entity
         'is_property'  => false,
         'is_relative'  => false,
         'is_link'      => false,
-        'is_default_value' => false,
+        'is_default_value' => true,
         'is_default_logic' => true,
         //'is_completed' => false,
         'is_accessible'=> true,
@@ -84,9 +84,9 @@ class Entity
                 $info['parent'] = $names[0];
             }
         }
-        if (isset($info['children'])){
-            foreach ($info['children'] as $name => $child){
-                if (is_scalar($child)) $child = array('name' => $name);
+        if (isset($info['properties'])){
+            foreach ($info['properties'] as $name => $child){
+                if (is_scalar($child)) $child = array('value' => $child);
                 $child['name'] = $name;
                 $child['is_property'] = true;
                 if (!isset($child['created']) && isset($info['created'])) $child['created'] = $info['created'];
@@ -414,7 +414,7 @@ class Entity
             $this->_changes['is_default_value'] = true;
         }
         // Возврат пути к текущему файлу, если есть
-        if ($this->_attributes['is_file']){
+        if ($this->is_file()){
             if (($proto = $this->is_default_value(null, true)) && $proto->is_exists()){
                 $file = $proto->file(null, $root);
                 return $file;
@@ -699,6 +699,19 @@ class Entity
 
     }
 
+    public function child($name, $load = false)
+    {
+        if (!isset($this->_children[$name])){
+            if ($load){
+                $this->_children[$name] = Data::read($this->uri().'/'.$name);
+            }else{
+                return false;
+            }
+        }
+        return $this->_children[$name];
+    }
+
+
     ############################################
     #                                          #
     #                 Entity                   #
@@ -712,6 +725,11 @@ class Entity
     function is_changed()
     {
         return empty($this->_changes);
+    }
+
+    function verify($cond)
+    {
+        return true;
     }
 
     /**

@@ -442,6 +442,7 @@ class Data
         $key = isset($info['uri'])? $info['uri'] : null;
         if (!isset($key) || !($entity = Buffer::get($key))){
             try{
+                $name = basename($info['uri']);
                 if (isset($info['uri']) && (empty($info['uri']) || preg_match('#^[a-zA-Z_0-9\/]+$#ui', $info['uri']))){
                     if (!empty($info['is_default_logic'])){
                         if (isset($info['proto'])){
@@ -458,9 +459,9 @@ class Data
                             $class = '\\project';
                         }else
                         if (substr($namespace,0,7) === '\\vendor'){
-                            $class = substr($namespace,7).'\\'.basename($namespace);
+                            $class = substr($namespace,7).'\\'.$name;
                         }else{
-                            $class = $namespace.'\\'.basename($namespace);
+                            $class = $namespace.'\\'.$name;
                         }
                     }
                 }else{

@@ -81,7 +81,7 @@ class Data
                     if ($error = json_last_error()){
                         throw new \Exception('Ошибка в "'.$d->getPathname().'"');
                     }
-                    $info['uri'] = preg_replace('#\\\\#u','/',mb_substr($fname, $trim_pos));
+                    $info['uri'] = preg_replace('#\\\\#u','/',mb_substr($d->getPathname(), $trim_pos));
                     //if (!empty($info['uri'])) $info['uri'] = '/'.$info['uri'];
                     if (!isset($info['is_default_logic'])) $info['is_default_logic'] = true;
                     $info['is_exists'] = true;

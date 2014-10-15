@@ -467,7 +467,7 @@ class Entity
     {
         $dir = $this->uri();
         if ($root){
-            return DIR.$dir.'/';
+            return DIR.trim($dir,'/').'/';
         }else{
             return $dir.'/';
         }

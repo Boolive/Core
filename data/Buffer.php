@@ -9,36 +9,84 @@ namespace boolive\core\data;
 
 class Buffer
 {
-    static private $list = array();
+    static private $list_entity = array();
+    static private $list_info = array();
 
-    static function activate()
+    /**
+     * Выбор экземпляра сущности
+     * @param string $uri
+     * @return null|Entity
+     */
+    static function get_entity($uri)
     {
-
-    }
-
-    static function get($key)
-    {
-        if (isset(self::$list[$key])){
-            return self::$list[$key];
+        if (isset(self::$list_entity[$uri])){
+            return self::$list_entity[$uri];
         }
         return null;
     }
 
     /**
+     * Запись в буфер экземпляра сущности
      * @param Entity $entity
      */
-    static function set($entity)
+    static function set_entity($entity)
     {
-        self::$list[$entity->uri()] = $entity;
+        self::$list_entity[$entity->uri()] = $entity;
     }
 
-    static function remove($key)
+    /**
+     * Удаление из буфера экземпляра сущности
+     * @param string $uri
+     */
+    static function unset_entity($uri)
     {
-        if (isset(self::$list[$key])) unset(self::$list[$key]);
+        if (isset(self::$list_entity[$uri])) unset(self::$list_entity[$uri]);
     }
 
-    static function is_exists($key)
+    /**
+     * Выбор информации о сущности (только атрибуты сущности)
+     * @param string $uri
+     * @return null|array
+     */
+    static function get_info($uri)
     {
-        return isset($key) && isset(self::$list[$key]);
+        if (isset(self::$list_info[$uri])) {
+            return self::$list_info[$uri];
+        }
+        return null;
+    }
+
+    /**
+     * Запись в буфер информации о сущности
+     * @param array $info Атрибуты и свойства сущности
+     * @return array Атрибуты без свойств
+     */
+    static function set_info($info)
+    {
+        if (isset($info['properties'])){
+            foreach ($info['properties'] as $name => $child){
+                if (is_scalar($child)) $child = array('value' => $child);
+                $child['name'] = $name;
+                $child['is_property'] = true;
+                if (!isset($child['is_default_logic'])) $child['is_default_logic'] = true;
+                if (!isset($child['created']) && isset($info['created'])) $child['created'] = $info['created'];
+                if (!isset($child['updated']) && isset($info['updated'])) $child['updated'] = $info['updated'];
+                $child['is_exists'] = $info['is_exists'];
+                $child['uri'] = $info['uri'].'/'.$name;
+                self::set_info($child);
+            }
+            unset($info['properties']);
+        }
+        self::$list_info[$info['uri']] = $info;
+        return $info;
+    }
+
+    /**
+     * Удалениеинформации о сущности из буфера
+     * @param string $uri
+     */
+    static function unset_info($uri)
+    {
+        if (isset(self::$list_info[$uri])) unset(self::$list_info[$uri]);
     }
 }

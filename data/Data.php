@@ -17,29 +17,41 @@ class Data
      */
     static function read($uri)
     {
-        if ($uri === ''){
-            $file = DIR.'project.info';
-        }else{
-            $file = DIR.trim($uri,'/').'/'.File::fileName($uri).'.info';
-        }
-        try {
-            if (is_file($file)) {
-                $info = file_get_contents($file);
-                $info = json_decode($info, true);
-                $info['uri'] = $uri;
-                if (!isset($info['is_default_logic'])) $info['is_default_logic'] = true;
-                $info['is_exists'] = true;
-                $entity = self::entity($info);
-            }else{
-                list($parent_uri, $name) = F::splitRight('/', $uri);
-                if ($parent = self::read($parent_uri)){
-                    $entity = $parent->child($name);
-                }else{
-                    $entity = false;
+        if (!($entity = Buffer::get_entity($uri))){
+            // Экземпляра объекта в буфере нет, проверяем массив его атрибутов в буфере
+            if (!($info = Buffer::get_info($uri))){
+                try {
+                    if ($uri === '') {
+                        $file = DIR . 'project.info';
+                    } else {
+                        $file = DIR . trim($uri, '/') . '/' . File::fileName($uri) . '.info';
+                    }
+                    if (is_file($file)) {
+                        // Чтение информации об объекте
+                        $info = file_get_contents($file);
+                        $info = json_decode($info, true);
+                        $info['uri'] = $uri;
+                        if (!isset($info['is_default_logic'])) $info['is_default_logic'] = true;
+                        $info['is_exists'] = true;
+                        // Инфо о свойствах в буфер
+                        $info = Buffer::set_info($info);
+                    }
+                } catch (\Exception $e) {
+                    return false;
                 }
             }
-        }catch (\Exception $e){
-            return false;
+            if (empty($info)){
+                // Поиск объекта в свойствах объекта
+                list($parent_uri, $name) = F::splitRight('/', $uri);
+                if ($parent = self::read($parent_uri)) {
+                    $entity = $parent->child($name);
+                } else {
+                    $entity = false;
+                }
+            }else{
+                // Создать экземпляр без свойств
+                $entity = self::entity($info);
+            }
         }
         return $entity;
     }
@@ -68,31 +80,42 @@ class Data
     {
         $cond = self::normalizeCond($cond);
         // select, from, depth
-        $dir = DIR.$cond['from'];
+        $dir = DIR.trim($cond['from'],'/');
         $objects =array();
         $trim_pos = mb_strlen(DIR);
-        foreach (new \DirectoryIterator($dir) as $d) {
-            if ($d->isDir()){
-                $fname = $d->getPathname().'/'.$d->getBasename();
-                if (is_file($fname.'.info')){
-                    // Все сведения об объекте в формате json (если нет класса объекта)
-                    $f = file_get_contents($fname.'.info');
-                    $info = json_decode($f, true);
-                    if ($error = json_last_error()){
-                        throw new \Exception('Ошибка в "'.$d->getPathname().'"');
+        try {
+            foreach (new \DirectoryIterator($dir) as $d) {
+                if ($d->isDir()) {
+                    $uri = preg_replace('#\\\\#u', '/', mb_substr($d->getPathname(), $trim_pos));
+                    if (!($obj = Buffer::get_entity($uri))) {
+                        if (!($info = Buffer::get_info($uri))) {
+                            $fname = $d->getPathname() . '/' . $d->getBasename();
+                            if (is_file($fname . '.info')) {
+                                // Все сведения об объекте в формате json (если нет класса объекта)
+                                $f = file_get_contents($fname . '.info');
+                                $info = json_decode($f, true);
+                                if ($error = json_last_error()) {
+                                    throw new \Exception('Ошибка в "' . $d->getPathname() . '"');
+                                }
+                                $info['uri'] = preg_replace('#\\\\#u', '/', mb_substr($d->getPathname(), $trim_pos));
+                                //if (!empty($info['uri'])) $info['uri'] = '/'.$info['uri'];
+                                if (!isset($info['is_default_logic'])) $info['is_default_logic'] = true;
+                                $info['is_exists'] = true;
+                            }
+                        }
+                        if ($info && empty($info['is_property'])) {
+                            $obj = Data::entity($info);
+                        }
                     }
-                    $info['uri'] = preg_replace('#\\\\#u','/',mb_substr($d->getPathname(), $trim_pos));
-                    //if (!empty($info['uri'])) $info['uri'] = '/'.$info['uri'];
-                    if (!isset($info['is_default_logic'])) $info['is_default_logic'] = true;
-                    $info['is_exists'] = true;
-                    $obj = Data::entity($info);
-                    if (!$cond['where'] || $obj->verify($cond['where'])){
-                        $objects[] = $obj;
-                    }else{
-                        //Buffer::remove($obj->uri());
+                    if ($obj && !$obj->is_property()) {
+                        if (!$cond['where'] || $obj->verify($cond['where'])) {
+                            $objects[] = $obj;
+                        }
                     }
                 }
             }
+        }catch (\Exception $e){
+
         }
 
         // where, key, access
@@ -129,6 +152,38 @@ class Data
         // struct
 
         return $objects;
+    }
+
+    /**
+     * Создание нового объекта
+     * @param Entity|string $proto Прототипируемый объект, на основе которого создаётся новый
+     * @param Entity|string $parent Родительский объект, в подчиненным (свойством) которого будет новый объект
+     * @param string|null $name Имя нового объекта
+     * @return Entity
+     */
+    static function create($proto, $parent, $name = null)
+    {
+        if (!$proto instanceof Entity) $proto = Data::read($proto);
+        $class = get_class($proto);
+        $attr = array(
+            'name' => $name ? $name : $proto->name(),
+            'order' => Entity::MAX_ORDER,
+            'is_hidden' => $proto->is_hidden(),
+            'is_draft' => $proto->is_draft(),
+            'is_property' => $proto->is_property()
+        );
+        /** @var $obj Entity */
+        $obj = new $class($attr);
+        // Уникальность имени
+        $obj->name(null, true);
+        // Установка родителя
+        if (isset($parent)){
+            if (!$parent instanceof Entity) $parent = Data::read($parent);
+            $obj->parent($parent);
+        }
+        // Установка прототипа
+        $obj->proto($proto);
+        return $obj;
     }
 
     /**
@@ -440,7 +495,7 @@ class Data
     static function entity($info)
     {
         $key = isset($info['uri'])? $info['uri'] : null;
-        if (!isset($key) || !($entity = Buffer::get($key))){
+        if (!isset($key) || !($entity = Buffer::get_entity($key))){
             try{
                 $name = basename($info['uri']);
                 if (isset($info['uri']) && (empty($info['uri']) || preg_match('#^[a-zA-Z_0-9\/]+$#ui', $info['uri']))){
@@ -474,10 +529,8 @@ class Data
             }catch (\ErrorException $e){
                 $entity = new Entity($info);
             }
-            if (isset($key)) Buffer::set($entity);
+            if (isset($key)) Buffer::set_entity($entity);
         }
         return $entity;
     }
-
-
 }

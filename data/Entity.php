@@ -9,7 +9,6 @@ namespace boolive\core\data;
 use boolive\core\file\File;
 use boolive\core\functions\F;
 use boolive\core\values\Rule;
-use ArrayAccess;
 
 class Entity
 {
@@ -50,6 +49,8 @@ class Entity
     protected $_changes = array();
     /** @var bool Признак, проверен ли объект */
     protected $_checked = false;
+    /** @var null|Error Ошибки после проверки объекта или выполнения каких-либо его функций */
+    protected $_errors = null;
     /** @var Entity|bool|null Экземпляр родителя или false, если родителя нет */
     protected $_parent;
     /** @var Entity|bool|null Экземпляр прототипа или false, если прототипа нет. */
@@ -89,6 +90,7 @@ class Entity
                 if (is_scalar($child)) $child = array('value' => $child);
                 $child['name'] = $name;
                 $child['is_property'] = true;
+                if (!isset($child['is_default_logic'])) $child['is_default_logic'] = true;
                 if (!isset($child['created']) && isset($info['created'])) $child['created'] = $info['created'];
                 if (!isset($child['updated']) && isset($info['updated'])) $child['updated'] = $info['updated'];
                 $child['is_exists'] = $info['is_exists'];
@@ -103,7 +105,7 @@ class Entity
                     $p = Data::read($info['proto']);
                     do{
                         $property = $p->{$name};
-                    }while (!$property && ($p = $p->proto()));
+                    }while (!$property && ($p = $p->proto(null, true)));
                     if ($property){
                         $child['proto'] = $property->uri();
                     }
@@ -238,6 +240,7 @@ class Entity
                 $this->_attributes['order'] = Entity::MAX_ORDER;
                 $this->_changes['parent'] = true;
                 $this->_changes['order'] = true;
+                if (!isset($this->_attributes['uri'])) $this->_attributes['uri'] = $new.'/'.$this->_attributes['name'];
                 if ($this->is_exists()) $this->name(null, true);
             }
         }
@@ -565,7 +568,7 @@ class Entity
      * Object referenced by this object
      * @param null|bool $new Новое значение признака
      * @param bool $return_entity Признак, возвращать объект вместо uri
-     * @return bool||Entity
+     * @return bool|Entity
      */
     function is_link($new = null, $return_entity = false)
     {
@@ -675,6 +678,16 @@ class Entity
     {
         if (!isset($this->_children[$name])){
             $this->_children[$name] = Data::read($this->uri().'/'.$name);
+            if (!$this->_children[$name]){
+                if (($proto = $this->proto(null, true)) && ($child = $proto->{$name})){
+                    $this->_children[$name] = Data::create($child, $this, $name);
+                }else{
+                    $this->_children[$name] = new Entity([
+                        'uri' => $this->uri().'/'.$name,
+                        'is_property' => true
+                    ]);
+                }
+            }
         }
         return $this->_children[$name];
     }
@@ -730,6 +743,31 @@ class Entity
     function verify($cond)
     {
         return true;
+    }
+
+    /**
+     * Ошибки объекта
+     * @return Error|null
+     */
+    function errors()
+    {
+        return $this->_errors;
+    }
+
+    /**
+     * Объект, на которого ссылется данный, если является ссылкой
+     * Если данный объект не является ссылкой, то возарщается $this,
+     * иначе возвращается первый из прототипов, не являющейся ссылкой
+     * @param bool $clone Клонировать, если объект является ссылкой?
+     * @return Entity
+     */
+    function linked($clone = false)
+    {
+        if (!empty($this->_attributes['is_link']) && ($link = $this->is_link(null, true))){
+            if ($clone) $link = clone $link;
+            return $link;
+        }
+        return $this;
     }
 
     /**

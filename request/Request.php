@@ -5,6 +5,9 @@
  * @version 1.0
  */
 namespace boolive\core\request;
+
+use boolive\core\IActivate;
+
 /**
  * @method null redirect($url) HTTP редирект на указанный http url адрес
  * @method null htmlHead($tag, $args = array(), $unique = false) Добавление тега в &lt;head&gt; Содержимое тега указывается аргументом "text"

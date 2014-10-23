@@ -70,8 +70,8 @@ class Error extends Exception implements IteratorAggregate
         parent::__construct((string)$message, 0, $previous);
         $this->code = $code;
         $this->parent = null;
-        $this->children = array();
-        $this->temps = array();
+        $this->children = [];
+        $this->temps = [];
         $this->is_temp = $is_temp;
     }
 
@@ -211,8 +211,8 @@ class Error extends Exception implements IteratorAggregate
     function clear()
     {
         unset($this->children, $this->temps);
-        $this->children = array();
-        $this->temps = array();
+        $this->children = [];
+        $this->temps = [];
     }
 
     /**
@@ -275,7 +275,7 @@ class Error extends Exception implements IteratorAggregate
     {
         // Объединение сообщений подчиненных исключений
         if ($all_sub && $this->isExist()){
-            $message = array();
+            $message = [];
             foreach ($this->children as $e){
                 /** @var $e Error */
                 $message = array_merge($message, $e->getUserMessageList($all_sub, $postfix));
@@ -313,12 +313,12 @@ class Error extends Exception implements IteratorAggregate
      * @param bool $user_message Признак, возвращать пользовательские сообщения или программные?
      * @return array Многомерный массив с информацией об исключени
      */
-    function toArray($user_message = true, $ignore = array())
+    function toArray($user_message = true, $ignore = [])
     {
         $result = array(
             'code' => $this->code,
             'message' => $user_message ? $this->getUserMessage() : (empty($this->args)?$this->message:array($this->message, $this->args)),
-            'children' => array()
+            'children' => []
         );
         foreach ($this->children as $name => $e){
             if (!in_array($name, $ignore, true)){
@@ -339,7 +339,7 @@ class Error extends Exception implements IteratorAggregate
     function toArrayCompact($user_message = true)
     {
         if ($this->children){
-            $result = array();
+            $result = [];
             foreach ($this->children as $name => $e){
                 if ($e instanceof Error){
                     $result[$name] = $e->toArrayCompact($user_message);
@@ -397,7 +397,7 @@ class Error extends Exception implements IteratorAggregate
 
     function __debugInfo()
     {
-        $trace = array();
+        $trace = [];
         $trace['code'] = $this->getCode();
         $trace['message'] = $this->getMessage();
         if (!empty($this->args)) $trace['message_user'] = $this->getUserMessage(false, '');
@@ -415,7 +415,7 @@ class Error extends Exception implements IteratorAggregate
     private function getMessageText($end = "\n")
     {
         // Формирование полного ключа
-		$keys = array();
+		$keys = [];
 		$curr = $this;
 		while ($curr){
 			array_unshift($keys, $curr->code);

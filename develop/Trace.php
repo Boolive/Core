@@ -24,7 +24,7 @@ class Trace
     /** @var mixed Ключ трассировки (именование) */
     private $key;
     /** @var array Список вложенных трассировок */
-    private $children = array();
+    private $children = [];
     /** @var string Форматированное значение (кэш) */
     private $format;
 
@@ -81,8 +81,8 @@ class Trace
      */
     function log()
     {
-        //error_log(self::Format($this, $trace_buf = array(), '  ', false));
-        File::create(date('Y.m.d G:i.s').' '.self::Format($this, $trace_buf = array(), '  ', false)."\r\n", DIR_TEMP.'trace.log', true);
+        //error_log(self::Format($this, $trace_buf = [], '  ', false));
+        File::create(date('Y.m.d G:i.s').' '.self::Format($this, $trace_buf = [], '  ', false)."\r\n", DIR_TEMP.'trace.log', true);
         return $this;
     }
 
@@ -93,7 +93,7 @@ class Trace
     function out()
     {
         if (php_sapi_name() == 'cli'){
-            echo self::Format($this, $trace_buf = array(), '  ', false)."\n";
+            echo self::Format($this, $trace_buf = [], '  ', false)."\n";
         }else{
             echo '<pre>'.self::Format($this).'</pre>';
         }
@@ -190,7 +190,7 @@ class Trace
      * @param bool $html Форматировать в html?
      * @return string
      */
-    static function format($var, &$trace_buf = array(), $pfx = '', $html = true)
+    static function format($var, &$trace_buf = [], $pfx = '', $html = true)
     {
         $sp  = $html?'<span style="color:#ddd">|</span>   ':'|   ';
         $back = strlen($sp);
@@ -292,7 +292,7 @@ class Trace
         }else{
             $arr = (array)$object;
         }
-        $result = array();
+        $result = [];
         while (list ($key, $value) = each($arr)){
             $keys = explode("\0", $key);
             $clear_key = $keys[sizeof($keys) - 1];

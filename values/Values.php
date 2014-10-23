@@ -86,7 +86,7 @@ class Values implements IteratorAggregate, ArrayAccess, Countable
                 // Если правило на массив
                 if (isset($this->_rule->arrays)){
                     // Нормализация аргументов
-                    $args = array(array(), null, false);
+                    $args = [[], null, false];
                     foreach ($this->_rule->arrays as $arg){
                         if (is_array($arg)){
                             $args[0] = $arg;
@@ -134,7 +134,7 @@ class Values implements IteratorAggregate, ArrayAccess, Countable
         }else{
             $this->_value = $value;
         }
-        //$this->_interfaces = array();
+        //$this->_interfaces = [];
         $this->_filtered = false;
     }
 
@@ -154,7 +154,7 @@ class Values implements IteratorAggregate, ArrayAccess, Countable
         if ($rule instanceof Rule){
             return Check::filter($this->getValue(), $rule, $error);
         }
-        $error = new Error(array('Нет правила'), 'NO_RULE');
+        $error = new Error(['Нет правила'], 'NO_RULE');
         return null;
     }
 
@@ -195,17 +195,17 @@ class Values implements IteratorAggregate, ArrayAccess, Countable
      * Ключи элементов передаются в массиве или через запятую.
      * Если текущее значение не массив, то оно будет заменено на пустой массив
      * @example
-     * 1. choose(array('name1', 'name2'));
+     * 1. choose(['name1', 'name2']);
      * 2. choose('name1', 'name2', 'name3');
      * @return \boolive\core\values\Values Ссылка на себя
      */
     function choose()
     {
         $value = $this->getValue();
-        if (!is_array($value)) $value= array();
+        if (!is_array($value)) $value= [];
         $arg = func_get_args();
         if (isset($arg[0]) && is_array($arg[0])) $arg = $arg[0];
-        $list = array();
+        $list = [];
         foreach ($arg as $name){
             if (isset($value[$name]) || array_key_exists($name, $value)) $list[$name] = $value[$name];
         }
@@ -221,8 +221,8 @@ class Values implements IteratorAggregate, ArrayAccess, Countable
     function getValues()
     {
         $values = $this->getValue();
-        $v = is_array($values)? $values : array($values);
-        $r = array();
+        $v = is_array($values)? $values : [$values];
+        $r = [];
         foreach ($v as $name => $value){
             $r[$name] = new Values($value);
         }
@@ -258,7 +258,7 @@ class Values implements IteratorAggregate, ArrayAccess, Countable
     {
         if ((is_array($list)||$list instanceof \ArrayAccess) &&!empty($list)){
             $value = $this->getValue();
-            if (!is_array($value)) $value = array();
+            if (!is_array($value)) $value = [];
             foreach ($list as $key => $value){
                 $value[$key] = $value;
             }
@@ -276,7 +276,7 @@ class Values implements IteratorAggregate, ArrayAccess, Countable
         $value = $this->getValue();
         if (is_array($value)){
             if ($shift){
-                $list = array();
+                $list = [];
                 foreach ((array)$this as $key => $value){
                     if (is_numeric($key)){
                         $list[-$shift + $key] = $value[$key];
@@ -339,7 +339,7 @@ class Values implements IteratorAggregate, ArrayAccess, Countable
     function offsetSet($name, $value)
     {
         $v = $this->getValue();
-        if (!is_array($v)) $v = array();
+        if (!is_array($v)) $v = [];
         if (is_null($name)){
             $v[] = $value;
         }else{
@@ -413,7 +413,7 @@ class Values implements IteratorAggregate, ArrayAccess, Countable
      * Удаление элементов по именам
      * Ключи передаются в массиве или через запятую.
      * @example
-     * 1. offsetUnsetList(array('name1', 'name2'));
+     * 1. offsetUnsetList(['name1', 'name2']);
      * 2. offsetUnsetList('name1', 'name2', 'name3');
      */
     function offsetUnsetList()
@@ -532,7 +532,7 @@ class Values implements IteratorAggregate, ArrayAccess, Countable
         if (is_object($this->_value)){
             $this->_value = clone $this->_value;
         }
-        $this->_interfaces = array();
+        $this->_interfaces = [];
         $this->_maker = null;
     }
 

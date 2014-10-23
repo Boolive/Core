@@ -15,7 +15,7 @@ use boolive\core\IActivate;
 class Events implements IActivate
 {
     /** @var array Реестр обработчиков событий */
-    private static $handlers = array();
+    private static $handlers = [];
     /** @var bool Признак, требуется ли выпонить сохранение обработчиков в файл */
     private static $need_save = false;
 
@@ -78,7 +78,7 @@ class Events implements IActivate
      * @param array|mixed $params Параметры события
      * @return EventResult Объект события с результатами его обработки
      */
-    static function trigger($event_name, $params=array())
+    static function trigger($event_name, $params=[])
     {
         $r = new EventResult();
         if (isset(self::$handlers[$event_name])){
@@ -116,10 +116,10 @@ class Events implements IActivate
      */
     private static function save()
     {
-        $content = array();
+        $content = [];
         $list = self::$handlers;
         foreach ($list as $event => $handlers){
-            $content[$event] = array();
+            $content[$event] = [];
             $cnt = sizeof($handlers);
             for ($i = 0; $i < $cnt; $i++){
                 // Если не указано о сохранени или явно указано сохранять

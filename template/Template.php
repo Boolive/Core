@@ -51,7 +51,7 @@ class Template implements IActivate
      * @throws Error
      * @return string
      */
-    static function render($template, $v = array())
+    static function render($template, $v = [])
     {
         if ($engine = self::getEngine($template)){
             return $engine->render($template, $v);

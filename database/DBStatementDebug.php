@@ -19,7 +19,7 @@ class DBStatementDebug
 {
     /** @var PDOStatement */
     private $stmt;
-    private $values = array();
+    private $values = [];
     private $info;
     private $debug = true;
     private $count = true;

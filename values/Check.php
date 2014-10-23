@@ -58,7 +58,7 @@ class Check
                 if (sizeof($ignore) == 1 && is_array($ignore[0])) $ignore = $ignore[0];
                 unset($filters['ignore']);
             }else{
-                $ignore = array();
+                $ignore = [];
             }
             // Фильтр значений
             foreach ($filters as $filter => $args){
@@ -109,7 +109,7 @@ class Check
             return $value;
         }
         if (is_string($value)){
-            return !in_array(mb_strtolower($value), array('false', '', '0'));
+            return !in_array(mb_strtolower($value), ['false', '', '0']);
         }
         if (is_scalar($value)){
             return (bool)$value;
@@ -203,7 +203,7 @@ class Check
      */
     static function null($value, &$error, Rule $rule)
     {
-        if (isset($value)/* && !(is_string($value) && in_array(strtolower($value), array('null')))*/){
+        if (isset($value)/* && !(is_string($value) && in_array(strtolower($value), ['null']))*/){
             $error = new Error('Должно быть неопределённым (null)', 'null');
         }
         return null;
@@ -218,14 +218,14 @@ class Check
      */
     static function arrays($value, &$error, Rule $rule)
     {
-        $result = array();
+        $result = [];
         if (is_array($value)){
             $err_msg = 'Некорректное структура массива или значения в нём';
             // Контейнер для ошибок на элементы
             $error = null;
             //$error = new Error('Неверная структура.', 'arrays');
             // Сведения о правиле
-            $rule_sub = array();
+            $rule_sub = [];
             $rule_default = null;
             $tree = false;
             foreach ($rule->arrays as $arg){
@@ -248,7 +248,7 @@ class Check
                 if (isset($rule_sub[$key])){
                     // Отсутствие элемента
                     if (isset($rule_sub[$key]->forbidden)){
-                        $sub_error = new Error(array('Элемент "%s" должен отсутствовать', $key), 'forbidden');
+                        $sub_error = new Error(['Элемент "%s" должен отсутствовать', $key], 'forbidden');
                     }else{
                         $result[$key] = self::filter($v, $rule_sub[$key], $sub_error);
                     }
@@ -306,7 +306,7 @@ class Check
         if (is_object($value) && (empty($class) || $value instanceof $class)){
             return $value;
         }
-        $error = new Error(array('Должен быть объектом класса "%s"', $class), 'object');
+        $error = new Error(['Должен быть объектом класса "%s"', $class], 'object');
         return null;
     }
 
@@ -414,15 +414,15 @@ class Check
         $max = isset($rule->max[0])? $rule->max[0] : null;
         if (is_int($value) || is_double($value)){
             $result = min($max, $value);
-            if ($value != $result) $error = new Error(array('Требуется не больше %s', $max), 'max');
+            if ($value != $result) $error = new Error(['Требуется не больше %s', $max], 'max');
         }else
         if (is_string($value) && mb_strlen($value) > $max){
             $result = mb_substr($value, 0, $max);
-            if ($value != $result) $error = new Error(array('Требуется не больше %s символов(а)', $max), 'max');
+            if ($value != $result) $error = new Error(['Требуется не больше %s символов(а)', $max], 'max');
         }else
         if (is_array($value) && sizeof($value) > $max){
             $result = array_slice($value, 0, $max);
-            if ($value != $result) $error = new Error(array('Требуется не больше %s элементов(а)', $max), 'max');
+            if ($value != $result) $error = new Error(['Требуется не больше %s элементов(а)', $max], 'max');
         }else{
             $result = $value;
         }
@@ -442,13 +442,13 @@ class Check
         $result = $value;
         if (is_int($value) || is_double($value)){
             $result = max($min, $value);
-            if ($value != $result) $error = new Error(array('Требуется не меньше %s', $min), 'min');
+            if ($value != $result) $error = new Error(['Требуется не меньше %s', $min], 'min');
         }else
         if (is_string($value) && mb_strlen($value) < $min){
-            $error = new Error(array('Требуется не меньше %s символов(а)', $min), 'min');
+            $error = new Error(['Требуется не меньше %s символов(а)', $min], 'min');
         }else
         if (is_array($value) && sizeof($value) < $min){
-            $error = new Error(array('Длжно быть не меньше %s элементов(а)', $min), 'min');
+            $error = new Error(['Длжно быть не меньше %s элементов(а)', $min], 'min');
         }
         return $result;
     }
@@ -465,15 +465,15 @@ class Check
         $less = isset($rule->less[0])? $rule->less[0] : null;
         if ((is_int($value) || is_double($value)) && !($value < $less)){
             $result = $less - 1;
-            if ($value != $result) $error = new Error(array('Требуется меньше %s', $less), 'less');
+            if ($value != $result) $error = new Error(['Требуется меньше %s', $less], 'less');
         }else
         if (is_string($value) && !(mb_strlen($value) < $less)){
             $result = mb_substr($value, 0, $less - 1);
-            if ($value != $result) $error = new Error(array('Требуется меньше %s символов(а)', $less), 'less');
+            if ($value != $result) $error = new Error(['Требуется меньше %s символов(а)', $less], 'less');
         }else
         if (is_array($value) && !(sizeof($value) < $less)){
             $result = array_slice($value, 0, $less - 1);
-            if ($value != $result) $error = new Error(array('Требуется меньше %s элементов(а)', $less), 'less');
+            if ($value != $result) $error = new Error(['Требуется меньше %s элементов(а)', $less], 'less');
         }else{
             $result = $value;
         }
@@ -492,17 +492,17 @@ class Check
         $more = isset($rule->more[0])? $rule->more[0] : null;
         if ((is_int($value) || is_double($value)) && !($value > $more)){
             $value = $more + 1;
-            $error = new Error(array('Требуется больше %s', $more), 'more');
+            $error = new Error(['Требуется больше %s', $more], 'more');
         }else
         if (is_string($value) && !(mb_strlen($value) > $more)){
             if ($more==0){
                 $error = new Error('Требуется заполнить', 'more');
             }else{
-                $error = new Error(array('Требуется больше %s символов(а)', $more), 'more');
+                $error = new Error(['Требуется больше %s символов(а)', $more], 'more');
             }
         }else
         if (is_array($value) && !(sizeof($value) > $more)){
-            $error = new Error(array('Требуется больше %s элементов(а)', $more), 'more');
+            $error = new Error(['Требуется больше %s элементов(а)', $more], 'more');
         }
         return $value;
     }
@@ -519,7 +519,7 @@ class Check
         $eq = isset($rule->eq[0])? $rule->eq[0] : null;
         $strong = isset($rule->eq[1])? $rule->eq[1] : false;
         if (!(($strong && $value===$eq) || (!$strong && $value==$eq))){
-            $error = new Error(array('Должно равняться %s', array($eq)), 'eq');
+            $error = new Error(['Должно равняться %s', [$eq]], 'eq');
             $value = $eq;
         }
         return $value;
@@ -537,7 +537,7 @@ class Check
         $not = isset($rule->not[0])? $rule->not[0] : null;
         if ($value==$not){
             $value = null;
-            $error = new Error(array('Не должно равняться %s', array($not)), 'not');
+            $error = new Error(['Не должно равняться %s', [$not]], 'not');
         }
         return $value;
     }
@@ -684,7 +684,7 @@ class Check
                 return $value;
             }
         }
-        $error = new Error(array('"Некорректный URI', $value), 'uri');
+        $error = new Error(['"Некорректный URI', $value], 'uri');
         return $value;
     }
 

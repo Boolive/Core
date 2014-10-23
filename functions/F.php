@@ -21,7 +21,7 @@ class F
      * @param int $filter
      * @return string Подготовленный текст
      */
-    static function parse($text, $vars=array(), $tpl_left = '{', $tpl_right = '}', $filter = FILTER_SANITIZE_SPECIAL_CHARS)
+    static function parse($text, $vars=[], $tpl_left = '{', $tpl_right = '}', $filter = FILTER_SANITIZE_SPECIAL_CHARS)
     {
         if ($filter) $vars = filter_var_array($vars, $filter);
         // По циклу проходимся по всем переменным заменяя значения в {} на значения в массиве
@@ -116,7 +116,7 @@ class F
      */
     static function implodeRecursive($glue, $pieces)
     {
-        $items = array();
+        $items = [];
         foreach ($pieces as $item){
             if (is_array($item)){
                 $items[] = self::implodeRecursive($glue, $item);
@@ -299,7 +299,7 @@ class F
             include $file;
             if (isset($$var_name)) return $$var_name;
         }
-        return array();
+        return [];
     }
 
     /**
@@ -348,7 +348,7 @@ class F
 
     static function array_unique($array)
     {
-        $result = array();
+        $result = [];
         foreach($array as $val) {
             $result[$val] = true;
         }
@@ -376,7 +376,7 @@ class F
             $result .= str_repeat($indent, $indentLevel);
             $result .= $ia_accos ? ((is_int($key) ? $key : "'" . addslashes($key) . "'") . ' => ') : '';
             if (is_array($value)){
-                if ($value === array()) {
+                if ($value === []) {
                     $result .= $syntax['open'] . $syntax['close'] . ",\n";
                 }else{
                     $indentLevel++;

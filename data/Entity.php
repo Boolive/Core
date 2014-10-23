@@ -20,7 +20,7 @@ class Entity
     const MAX_DEPTH = 4294967295;
 
     /** @var array Атрибуты */
-    public $_attributes = array(
+    public $_attributes = [
         'uri'          => null,
         'name'         => null,
         'parent'       => null,
@@ -42,11 +42,11 @@ class Entity
         //'is_completed' => false,
         'is_accessible'=> true,
         'is_exists'    => false,
-    );
+    ];
     /** @var array of Entity Подчиненные объекты */
-    protected $_children = array();
+    protected $_children = [];
     /** @var array Названия измененных атрибутов */
-    protected $_changes = array();
+    protected $_changes = [];
     /** @var bool Признак, проверен ли объект */
     protected $_checked = false;
     /** @var null|Error Ошибки после проверки объекта или выполнения каких-либо его функций */
@@ -76,7 +76,7 @@ class Entity
      * Конструктор
      * @param array $info Атрибуты объекта и свойства
      */
-    function __construct($info = array())
+    function __construct($info = [])
     {
         if ((!isset($info['parent']) || !isset($info['name'])) && isset($info['uri'])){
             $names = F::splitRight('/', $info['uri'], true);
@@ -87,7 +87,7 @@ class Entity
         }
         if (isset($info['properties'])){
             foreach ($info['properties'] as $name => $child){
-                if (is_scalar($child)) $child = array('value' => $child);
+                if (is_scalar($child)) $child = ['value' => $child];
                 $child['name'] = $name;
                 $child['is_property'] = true;
                 if (!isset($child['is_default_logic'])) $child['is_default_logic'] = true;
@@ -132,7 +132,7 @@ class Entity
      */
     protected function rule()
     {
-        return Rule::arrays(array(
+        return Rule::arrays([
             'name'         => Rule::string()->regexp('|^[^/@:#\\\\]*$|')->min(IS_INSTALL?1:0)->max(100)->required(), // Имя объекта без символов /@:#\
             'parent'       => Rule::any(Rule::uri(), Rule::null()), // URI родителя
             'proto'        => Rule::any(Rule::uri(), Rule::null()), // URI прототипа
@@ -152,23 +152,23 @@ class Entity
             'is_default_value' => Rule::bool(), // Признак, используется значение прототипа или своё?
             'is_default_logic' => Rule::bool(), // Признак, используется класс прототипа или свой?
             // Сведения о загружаемом файле. Не является атрибутом объекта, но используется при сохранении
-            'file'	=> Rule::arrays(array(
+            'file'	=> Rule::arrays([
                 'tmp_name'	=> Rule::string(), // Путь на связываемый файл
                 'name'		=> Rule::lowercase()->ospatterns('*.*')->ignore('lowercase')->required(), // Имя файла, из которого будет взято расширение
                 'size'		=> Rule::int(), // Размер в байтах
                 'error'		=> Rule::int()->eq(0, true), // Код ошибки. Если 0, то ошибки нет
                 'type'      => Rule::string(), // MIME тип файла
                 'content'   => Rule::string()
-            )),
+            ]),
             // Сведения о классе объекта (загружаемый файл или программный код). Не является атрибутом объекта
-            'logic' => Rule::arrays(array(
+            'logic' => Rule::arrays([
                 'content'   => Rule::string(), // Программный код класса
                 'tmp_name'	=> Rule::string(), // Путь на файл, если класс загржается в виде файла
                 'size'		=> Rule::int(), // Размер в байтах
                 'error'		=> Rule::int()->eq(0, true), // Код ошибки. Если 0, то ошибки нет
                 'type'      => Rule::string() // MIME тип файла
-            ))
-        ));
+            ])
+        ]);
     }
 
     /**
@@ -397,12 +397,12 @@ class Entity
                 $this->_attributes['is_file'] = false;
             }else{
                 if (is_string($new)){
-                    $new = array(
+                    $new = [
                         'tmp_name'	=> $new,
                         'name' => basename($new),
                         'size' => @filesize($new),
                         'error'	=> is_file($new)? 0 : true
-                    );
+                    ];
                 }
                 if (empty($new['name']) && $this->is_file()){
                     $new['name'] = $this->name().'.'.File::fileExtention($this->file());
@@ -707,7 +707,7 @@ class Entity
 
     }
 
-    public function children($cond = array())
+    public function children($cond = [])
     {
 
     }

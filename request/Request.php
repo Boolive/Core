@@ -13,7 +13,7 @@ use boolive\core\values\Rule;
 
 /**
  * @method null redirect($url) HTTP редирект на указанный http url адрес
- * @method null htmlHead($tag, $attr = array(), $unique = false) Добавление тега в &lt;head&gt; Содержимое тега указывается атрибутом "text"
+ * @method null htmlHead($tag, $attr = [], $unique = false) Добавление тега в &lt;head&gt; Содержимое тега указывается атрибутом "text"
  */
 class Request implements IActivate, \ArrayAccess, \Countable
 {
@@ -24,12 +24,12 @@ class Request implements IActivate, \ArrayAccess, \Countable
      * @var array Ассоциативный массив команд
      * Первое измерение (ассоциативное) - название команд, второе (числовое) - команды, третье - аргументы команд
      */
-    private $commands = array();
+    private $commands = [];
     /**
      * Сгруппированные комманды
      * @var array
      */
-    private $groups = array();
+    private $groups = [];
     /**
      * Входящие данные и информация о запросе
      * @var array
@@ -39,7 +39,7 @@ class Request implements IActivate, \ArrayAccess, \Countable
      * Отфильтрованные данные
      * @var array
      */
-    private $filtered = array();
+    private $filtered = [];
     /**
      * Ошибки во входящих данных, обнаруженные при фильтре
      * @var null|Error
@@ -49,7 +49,7 @@ class Request implements IActivate, \ArrayAccess, \Countable
      * Спрятанные входящие данные
      * @var array
      */
-    private $stahes = array();
+    private $stahes = [];
 
     /**
      * Активация модуля
@@ -76,7 +76,7 @@ class Request implements IActivate, \ArrayAccess, \Countable
         if (isset($_FILES)){
             // Перегруппировка элементов массива $_FILES
             $rec_to_array = function ($array, $name) use (&$rec_to_array){
-                $result = array();
+                $result = [];
                 foreach ($array as $key => $value){
                     if (is_array($value)){
                         $result[$key] = $rec_to_array($value, $name);
@@ -86,9 +86,9 @@ class Request implements IActivate, \ArrayAccess, \Countable
                 }
                 return $result;
             };
-            $files = array();
+            $files = [];
             foreach ($_FILES as $field => $data){
-                $files[$field] = array();
+                $files[$field] = [];
                 foreach ($data as $name => $value){
                     if (is_array($value)){
                         $files[$field] = F::arrayMergeRecursive($files[$field], $rec_to_array($value, $name));
@@ -98,13 +98,13 @@ class Request implements IActivate, \ArrayAccess, \Countable
                 }
             }
         }else{
-            $files = array();
+            $files = [];
         }
 
         self::$source = array(
-            'REQUEST' => array(),
+            'REQUEST' => [],
             'FILES' => $files,
-            'COOKIE' => isset($_COOKIE)? $_COOKIE : array(),
+            'COOKIE' => isset($_COOKIE)? $_COOKIE : [],
             'RAW' => file_get_contents("php://input"), // Неформатированные данные
             'SERVER' => $_SERVER
         );
@@ -119,7 +119,7 @@ class Request implements IActivate, \ArrayAccess, \Countable
         if (isset(self::$source['REQUEST']['path']) && (self::$source['REQUEST']['path'] = rtrim(self::$source['REQUEST']['path'],'/ '))){
             self::$source['PATH'] = explode('/', trim(self::$source['REQUEST']['path'],' /'));
         }else{
-            self::$source['PATH'] = array();
+            self::$source['PATH'] = [];
         }
         if (isset($_POST)){
             self::$source['REQUEST'] = array_replace_recursive(self::$source['REQUEST'], $_POST);
@@ -162,7 +162,7 @@ class Request implements IActivate, \ArrayAccess, \Countable
     function addCommand($name, $args = [], $prepand = false)
     {
         if (!isset($this->commands[$name])){
-            $this->commands[$name] = array();
+            $this->commands[$name] = [];
         }
         if ($prepand){
             array_unshift($this->commands[$name], $args);
@@ -189,11 +189,11 @@ class Request implements IActivate, \ArrayAccess, \Countable
     function getCommands($name, $unique = false)
     {
         if (!isset($this->commands[$name])){
-            $this->commands[$name] = array();
+            $this->commands[$name] = [];
         }
         if ($unique){
-            $keys = array();
-            $result = array();
+            $keys = [];
+            $result = [];
             foreach ($this->commands[$name] as $com){
                 $key = serialize($com);
                 if (!isset($keys[$key])){
@@ -306,12 +306,12 @@ class Request implements IActivate, \ArrayAccess, \Countable
      * @param string $schema Схема url. Указывается, если указан $host
      * @return string
      */
-    static function url($path = null, $shift = 0, $args = array(), $append = false, $host = false, $schema = 'http://')
+    static function url($path = null, $shift = 0, $args = [], $append = false, $host = false, $schema = 'http://')
     {
         if (is_string($path)){
 			$path = explode('/',trim($path,'/'));
 		}
-        if (!isset($path)) $path = array();
+        if (!isset($path)) $path = [];
         $url = '';
         if (isset($path[0]) && $path[0] == 'contents'){
             array_shift($path);
@@ -413,5 +413,15 @@ class Request implements IActivate, \ArrayAccess, \Countable
     public function count()
     {
         return count($this->filtered[$offset]);
+    }
+
+    public function __debugInfo()
+    {
+        return [
+            'filtered' => $this->filtered,
+            'input' => $this->input,
+            'error' => $this->errors,
+            'commands' => $this->commands
+            ];
     }
 }

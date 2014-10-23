@@ -27,7 +27,7 @@ use boolive\core\develop\Benchmark;
 class DB extends PDO
 {
     /** @var array Установленные соединения */
-    static private $connection = array();
+    static private $connection = [];
     /** @var array Уровни вложенности транзакций */
     private $transaction_level = 0;
     /** @var string Префикс к имени таблиц */
@@ -46,7 +46,7 @@ class DB extends PDO
      * 	'dsn' => array('driver' => 'mysql', 'dbname' => '', ...),
      *  'user' => '',
      *  'password' => '',
-     *  'options' => array(),
+     *  'options' => [],
      *  'prefix' => ''
      * )
      * @return DB
@@ -85,7 +85,7 @@ class DB extends PDO
         return null;
     }
 
-    function __construct($dsn, $username = null, $passwd = null, $options = array(), $prefix = '', $debug = false, $count = false, $slow = 0)
+    function __construct($dsn, $username = null, $passwd = null, $options = [], $prefix = '', $debug = false, $count = false, $slow = 0)
     {
         parent::__construct($dsn, $username, $passwd, $options);
         $this->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
@@ -190,7 +190,7 @@ class DB extends PDO
      * @throws Error
      * @return DBStatementDebug|PDOStatement
      */
-    function prepare($sql, $driver_options = array())
+    function prepare($sql, $driver_options = [])
     {
 //        if (isset($this->statements[$sql])){
 //            return $this->statements[$sql];
@@ -261,7 +261,7 @@ class DB extends PDO
      */
     static function getQueryList($multisql)
     {
-        $queries = array();
+        $queries = [];
         $strlen = strlen($multisql);
         $position = 0;
         $query = '';

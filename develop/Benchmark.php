@@ -14,9 +14,9 @@ use boolive\core\IActivate;
 class Benchmark implements IActivate
 {
     /** @var array Начальные значения замеров */
-    static private $start = array();
+    static private $start = [];
     /** @var array Результаты замеров */
-    static private $stop = array();
+    static private $stop = [];
 
     /**
      * Активация

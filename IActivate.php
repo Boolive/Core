@@ -8,5 +8,5 @@ namespace boolive\core;
 
 interface IActivate
 {
-
+    static function activate();
 } 

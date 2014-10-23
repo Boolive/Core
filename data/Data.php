@@ -81,7 +81,7 @@ class Data
         $cond = self::normalizeCond($cond);
         // select, from, depth
         $dir = DIR.trim($cond['from'],'/');
-        $objects =array();
+        $objects =[];
         $trim_pos = mb_strlen(DIR);
         try {
             foreach (new \DirectoryIterator($dir) as $d) {
@@ -195,10 +195,10 @@ class Data
      * @throws \Exception
      * @return array
      */
-    static function normalizeCond($cond, $full_normalize = true, $default = array())
+    static function normalizeCond($cond, $full_normalize = true, $default = [])
     {
         if (!empty($cond['correct'])) return $cond;
-        $result = array();
+        $result = [];
         // Определение формата условия - массив, url, строка, массив из объекта и url
         if (is_array($cond)){
             if (sizeof($cond) == 2 && isset($cond[0]) && $cond[0] instanceof Entity && isset($cond[1])){
@@ -253,18 +253,18 @@ class Data
             if (!isset($result['depth'])){
                 // По умолчанию в зависимости от select
                 if ($result['select'] == 'self' || $result['select'] == 'link'){
-                    $result['depth'] = array(0,0);
+                    $result['depth'] = [0,0];
                 }else
                 if ($result['select'] == 'parents' || $result['select'] == 'protos' || $result['struct'] == 'tree'){
                     // выбор всех родителей или прототипов
-                    $result['depth'] = array(1, Entity::MAX_DEPTH);
+                    $result['depth'] = [1, Entity::MAX_DEPTH];
                 }else{
                     // выбор непосредственных подчиненных или наследников
-                    $result['depth'] = array(1,1);
+                    $result['depth'] = [1,1];
                 }
             }else{
                 if (!is_array($result['depth'])){
-                    $result['depth'] = array(1, $result['depth']);
+                    $result['depth'] = [1, $result['depth']];
                 }
                 $result['depth'][1] = ($result['depth'][1] === 'max')? Entity::MAX_DEPTH : $result['depth'][1];
             }
@@ -291,12 +291,12 @@ class Data
             // order - сортировка. Можно указывать атрибуты и названия подчиненных объектов (свойств)
             if (isset($result['order'])){
                 if (!empty($result['order']) && !is_array(reset($result['order']))){
-                    $result['order'] = array($result['order']);
+                    $result['order'] = [$result['order']];
                 }
             }
             if (empty($result['order'])){
                 if ($result['select'] == 'children' || $result['struct'] == 'tree'){
-                    $result['order'] = array(array('order', 'asc'));
+                    $result['order'] = [['order', 'asc']];
                 }else{
                     $result['order'] = false;
                 }
@@ -308,7 +308,7 @@ class Data
 
             // limit - ограничения выборки, начальный объект и количество
             if ($result['calc'] == 'exists'){
-                $result['limit'] = array(0,1);
+                $result['limit'] = [0,1];
             }else
             if (empty($result['limit'])){
                 $result['limit'] = false;
@@ -327,7 +327,7 @@ class Data
             }
 
             // Упорядочивание параметров (для создания корректных хэш-ключей для кэша)
-            $result = array(
+            $result = [
                 'select' => $result['select'],
                 'calc' => $result['calc'],
                 'from' => $result['from'],
@@ -339,7 +339,7 @@ class Data
                 'key' => $result['key'],
                 'access' => $result['access'],
                 'correct' => true
-            );
+            ];
         }
         return $result;
     }
@@ -376,7 +376,7 @@ class Data
      */
     static function condToUrl($cond)
     {
-        $cond = self::normalizeCond($cond, array(), true);
+        $cond = self::normalizeCond($cond, [], true);
         if (is_array($cond['from'])){
             $info = parse_url(reset($cond['from']));
             $base_url = '';
@@ -398,7 +398,7 @@ class Data
         }
         $url = F::toJSON($cond, false);
         $url = mb_substr($url, 1, mb_strlen($url)-2, 'UTF-8');
-        $url = strtr($url, array(
+        $url = strtr($url, [
                          '[' => '(',
                          ']' => ')',
                          ',""]' => ',)',
@@ -408,7 +408,7 @@ class Data
                          '">="' => '"gte"',
                          '"<"' => '"lt"',
                          '"<="' => '"lte"'
-                    ));
+                    ]);
         $url = preg_replace_callback('/"([^"]*)"/ui', function($m){
                         $replacements = array("\\", "/", "\"", "\n", "\r", "\t", "\x08", "\x0c");
                         $escapers = array("\\\\", "\\/", "\\\"", "\\n", "\\r", "\\t", "\\f", "\\b");
@@ -452,7 +452,7 @@ class Data
                     $replacements = array("\\\\", "\\/", "\\\"", "\\n", "\\r", "\\t", "\\f", "\\b");
                     return $m[1].'"'.str_replace($escapers, $replacements, $m[2]).'"';
                 }, $cond);
-        $cond = strtr($cond, array(
+        $cond = strtr($cond, [
                     '(' => '[',
                     ')' => ']',
                     ',)' => ',""]',
@@ -462,7 +462,7 @@ class Data
                     '",gte"' => '",>="',
                     '",lt"' => '",<"',
                     '",lte"' => '",<="',
-                ));
+                ]);
         $cond = '['.$cond.']';
         $cond = json_decode($cond);
         if ($accos && $cond){

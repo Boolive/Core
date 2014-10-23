@@ -28,7 +28,7 @@ class Config
         try{
             return include DIR_CONFIG.$name.'.php';
         }catch (\Exception $e){
-            return array();
+            return [];
         }
     }
 
@@ -73,10 +73,10 @@ class Config
      */
     static function generate(array $config, $comment = '', $pretty = true)
     {
-        $arraySyntax = array(
+        $arraySyntax = [
             'open' => self::$bracket_syntax ? '[' : 'array(',
             'close' => self::$bracket_syntax ? ']' : ')'
-        );
+        ];
         $code = "<?php\n";
         if ($comment){
             $comment = explode("\n",$comment);

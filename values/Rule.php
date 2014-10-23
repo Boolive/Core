@@ -72,7 +72,7 @@ namespace boolive\core\values;
 class Rule
 {
     /** @var array Фильтры */
-    private $filters = array();
+    private $filters = [];
 
     /**
      * Создание правила.

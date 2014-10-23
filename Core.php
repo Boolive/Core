@@ -30,17 +30,17 @@ namespace boolive\core {
         {
             self::$loader = $loader;
             self::$loader->unregister();
-            self::$activated = array(__CLASS__ => __CLASS__);
-            self::$included = array(__CLASS__ => __CLASS__);
+            self::$activated = [__CLASS__ => __CLASS__];
+            self::$included = [__CLASS__ => __CLASS__];
             self::$error_reporting = error_reporting();
             // Регистрация метода-обработчика автозагрузки классов
-            spl_autoload_register(array('\boolive\core\Core', 'loadClass'), true, true);
+            spl_autoload_register(['\boolive\core\Core', 'loadClass'], true, true);
             // Регистрация метода-обработчка завершения выполнения системы
-            register_shutdown_function(array('\boolive\core\Core', 'deactivate'));
+            register_shutdown_function(['\boolive\core\Core', 'deactivate']);
             // Регистрация обработчика исключений
-            set_exception_handler(array('\boolive\core\Core', 'exception'));
+            set_exception_handler(['\boolive\core\Core', 'exception']);
             // Регистрация обработчика ошибок
-            set_error_handler(array('\boolive\core\Core', 'error'));
+            set_error_handler(['\boolive\core\Core', 'error']);
             // Временая зона
             date_default_timezone_set('UTC');
             // Настройка кодировки

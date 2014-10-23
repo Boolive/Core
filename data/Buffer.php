@@ -9,8 +9,8 @@ namespace boolive\core\data;
 
 class Buffer
 {
-    static private $list_entity = array();
-    static private $list_info = array();
+    static private $list_entity = [];
+    static private $list_info = [];
 
     /**
      * Выбор экземпляра сущности
@@ -65,7 +65,7 @@ class Buffer
     {
         if (isset($info['properties'])){
             foreach ($info['properties'] as $name => $child){
-                if (is_scalar($child)) $child = array('value' => $child);
+                if (is_scalar($child)) $child = ['value' => $child];
                 $child['name'] = $name;
                 $child['is_property'] = true;
                 if (!isset($child['is_default_logic'])) $child['is_default_logic'] = true;

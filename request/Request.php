@@ -6,13 +6,16 @@
  */
 namespace boolive\core\request;
 
+use boolive\core\errors\Error;
 use boolive\core\IActivate;
+use boolive\core\values\Check;
+use boolive\core\values\Rule;
 
 /**
  * @method null redirect($url) HTTP редирект на указанный http url адрес
- * @method null htmlHead($tag, $args = array(), $unique = false) Добавление тега в &lt;head&gt; Содержимое тега указывается аргументом "text"
+ * @method null htmlHead($tag, $attr = array(), $unique = false) Добавление тега в &lt;head&gt; Содержимое тега указывается атрибутом "text"
  */
-class Request implements IActivate
+class Request implements IActivate, \ArrayAccess, \Countable
 {
     /** @var \boolive\core\values\Input Исходные входящие данные */
     private static $source;
@@ -32,6 +35,16 @@ class Request implements IActivate
      * @var array
      */
     private $input;
+    /**
+     * Отфильтрованные данные
+     * @var array
+     */
+    private $filtered = array();
+    /**
+     * Ошибки во входящих данных, обнаруженные при фильтре
+     * @var null|Error
+     */
+    private $errors;
     /**
      * Спрятанные входящие данные
      * @var array
@@ -237,19 +250,28 @@ class Request implements IActivate
     }
 
     /**
-     * Все входящие данныи и информация о запроса
+     * Все отфильтрованные входящие данные
      * @return array
      */
-    function getInput()
+    function getFiltered()
     {
-        return $this->input;
+        return $this->filtered;
+    }
+
+    /**
+     * Ошибки при фильтре входящих данных
+     * @return null|Error
+     */
+    function getErrors()
+    {
+        return $this->errors;
     }
 
     /**
      * Подмешать к входящим данным
      * @param array $mix
      */
-    function inputMix($mix)
+    function mix($mix)
     {
         if (!empty($mix) && is_array($mix)) {
             $this->input = array_replace_recursive($this->input, $mix);
@@ -259,17 +281,18 @@ class Request implements IActivate
     /**
      * Спрятать текщие входящие данные
      */
-    function stashInput()
+    function stash()
     {
-        $this->stahes[] = $this->input;
+        $this->stahes[] = [$this->input, $this->filtered, $this->errors];
+        $this->errors = null;
     }
 
     /**
      * Востановить спрятанные входящие данные
      */
-    function unstashInput()
+    function unstash()
     {
-        $this->input = array_pop($this->stahes);
+        list($this->input, $this->filtered, $this->errors) = array_pop($this->stahes);
     }
 
     /**
@@ -337,5 +360,58 @@ class Request implements IActivate
 		}else{
 			return '/'.$url;
 		}
+    }
+
+    function setFilter(Rule $rule)
+    {
+        $this->filtered = Check::filter($this->input, $rule, $this->errors);
+        return !isset($this->errors) || !$this->errors->isExist();
+    }
+    /**
+     * Whether a offset exists
+     * @param mixed $offset An offset to check for.
+     * @return boolean
+     */
+    public function offsetExists($offset)
+    {
+        return isset($this->filtered[$offset]);
+    }
+
+    /**
+     * Offset to retrieve
+     * @param mixed $offset The offset to retrieve.
+     * @return mixed
+     */
+    public function offsetGet($offset)
+    {
+        return $this->filtered[$offset];
+    }
+
+    /**
+     * Offset to set
+     * @param mixed $offset The offset to assign the value to.
+     * @param mixed $value The value to set.
+     */
+    public function offsetSet($offset, $value)
+    {
+        $this->filtered[$offset] = $value;
+    }
+
+    /**
+     * Offset to unset
+     * @param mixed $offset
+     */
+    public function offsetUnset($offset)
+    {
+        unset($this->filtered[$offset]);
+    }
+
+    /**
+     * Count elements of filtered input
+     * @return int
+     */
+    public function count()
+    {
+        return count($this->filtered[$offset]);
     }
 }

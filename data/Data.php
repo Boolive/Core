@@ -30,7 +30,7 @@ class Data implements IActivate
     static function read($uri)
     {
         if ($store = self::getStore($uri)) {
-            $result = $store->read($uri);
+            return $store->read($uri);
         }
         return null;
     }
@@ -42,7 +42,7 @@ class Data implements IActivate
      *      -'select' => 'children', //self, children, parents, heirs, protos, child, link
      *      -'calc' => 'count', // false, exists, count, [sum, attr], [max, attr], [min, attr], [avg, attr]
      *      -'from' => '/contents',
-     *      -'depth' => [1,1], // minimum and maximum depth
+     *      -'depth' => 1, // maximum depth
      *      'struct' => 'array', // value, object, array, tree
      *      -'where' => [], //filter condition
      *      'order' => [['name', 'asc'], ['value','desc']],
@@ -175,20 +175,17 @@ class Data implements IActivate
             if (!isset($result['depth'])){
                 // По умолчанию в зависимости от select
                 if ($result['select'] == 'self' || $result['select'] == 'link'){
-                    $result['depth'] = [0,0];
+                    $result['depth'] = 0;
                 }else
                 if ($result['select'] == 'parents' || $result['select'] == 'protos' || $result['struct'] == 'tree'){
                     // выбор всех родителей или прототипов
-                    $result['depth'] = [1, Entity::MAX_DEPTH];
+                    $result['depth'] = Entity::MAX_DEPTH;
                 }else{
                     // выбор непосредственных подчиненных или наследников
-                    $result['depth'] = [1,1];
+                    $result['depth'] = 1;
                 }
             }else{
-                if (!is_array($result['depth'])){
-                    $result['depth'] = [1, $result['depth']];
-                }
-                $result['depth'][1] = ($result['depth'][1] === 'max')? Entity::MAX_DEPTH : $result['depth'][1];
+                $result['depth'] = ($result['depth'] === 'max' || $result['depth'] < 0)? Entity::MAX_DEPTH : $result['depth'];
             }
 
             // from - от куда или какой объект выбирать. Строка, число, массив

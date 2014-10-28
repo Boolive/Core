@@ -9,6 +9,7 @@ namespace boolive\core\data\stores;
 use boolive\core\data\Buffer;
 use boolive\core\data\Data;
 use boolive\core\data\IStore;
+use boolive\core\file\File;
 use boolive\core\functions\F;
 
 class FilesystemStore implements IStore
@@ -66,36 +67,44 @@ class FilesystemStore implements IStore
         $objects =[];
         $trim_pos = mb_strlen(DIR);
         try {
-            $dir_iterator = new \DirectoryIterator($dir);
-//            $iterator = new \RecursiveIteratorIterator($dir_iterator);
-//            $iterator->setMaxDepth(10);
+            if ($cond['depth'] > 0){
 
-            foreach ($dir_iterator as $d) {
-                if ($d->isDir()) {
-                    $uri = preg_replace('#\\\\#u', '/', mb_substr($d->getPathname(), $trim_pos));
-                    if (!($obj = Buffer::get_entity($uri))) {
-                        if (!($info = Buffer::get_info($uri))) {
-                            $fname = $d->getPathname() . '/' . $d->getBasename();
-                            if (is_file($fname . '.info')) {
-                                // Все сведения об объекте в формате json (если нет класса объекта)
-                                $f = file_get_contents($fname . '.info');
-                                $info = json_decode($f, true);
-                                if ($error = json_last_error()) {
-                                    throw new \Exception('Ошибка в "' . $d->getPathname() . '"');
+                if ($cond['depth'] == 1){
+                    $dir_iterator = new \DirectoryIterator($dir);
+                }else{
+                    $dir_iterator = new \RecursiveIteratorIterator(
+                        new \RecursiveDirectoryIterator($dir, \FilesystemIterator::SKIP_DOTS | \FilesystemIterator::UNIX_PATHS),
+                        \RecursiveIteratorIterator::SELF_FIRST
+                    );
+                    $dir_iterator->setMaxDepth($cond['depth'] - 1);
+                }
+                foreach ($dir_iterator as $d) {
+                    if ($d->isDir()) {
+                        $uri = preg_replace('#\\\\#u', '/', mb_substr($d->getPathname(), $trim_pos));
+                        if (!($obj = Buffer::get_entity($uri))) {
+                            if (!($info = Buffer::get_info($uri))) {
+                                $fname = $d->getPathname() . '/' . $d->getBasename();
+                                if (is_file($fname . '.info')) {
+                                    // Все сведения об объекте в формате json (если нет класса объекта)
+                                    $f = file_get_contents($fname . '.info');
+                                    $info = json_decode($f, true);
+                                    if ($error = json_last_error()) {
+                                        throw new \Exception('Ошибка в "' . $d->getPathname() . '"');
+                                    }
+                                    $info['uri'] = preg_replace('#\\\\#u', '/', mb_substr($d->getPathname(), $trim_pos));
+                                    //if (!empty($info['uri'])) $info['uri'] = '/'.$info['uri'];
+                                    if (!isset($info['is_default_logic'])) $info['is_default_logic'] = true;
+                                    $info['is_exists'] = true;
                                 }
-                                $info['uri'] = preg_replace('#\\\\#u', '/', mb_substr($d->getPathname(), $trim_pos));
-                                //if (!empty($info['uri'])) $info['uri'] = '/'.$info['uri'];
-                                if (!isset($info['is_default_logic'])) $info['is_default_logic'] = true;
-                                $info['is_exists'] = true;
+                            }
+                            if ($info && empty($info['is_property'])) {
+                                $obj = Data::entity($info);
                             }
                         }
-                        if ($info && empty($info['is_property'])) {
-                            $obj = Data::entity($info);
-                        }
-                    }
-                    if ($obj && !$obj->is_property()) {
-                        if (!$cond['where'] || $obj->verify($cond['where'])) {
-                            $objects[] = $obj;
+                        if ($obj && !$obj->is_property()) {
+                            if (!$cond['where'] || $obj->verify($cond['where'])) {
+                                $objects[] = $obj;
+                            }
                         }
                     }
                 }

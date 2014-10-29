@@ -39,16 +39,16 @@ class Data implements IActivate
      * @param $cond
      * <code>
      * [
-     *      -'select' => 'children', //self, children, parents, heirs, protos, child, link
-     *      -'calc' => 'count', // false, exists, count, [sum, attr], [max, attr], [min, attr], [avg, attr]
-     *      -'from' => '/contents',
-     *      -'depth' => 1, // maximum depth
+     *      'select' => 'children', //self, children, parents, heirs, protos, child, link
+     *      'calc' => 'count', // false, exists, count, [sum, attr], [max, attr], [min, attr], [avg, attr]
+     *      'from' => '/contents',
+     *      'depth' => 1, // maximum depth
      *      'struct' => 'array', // value, object, array, tree
-     *      -'where' => [], //filter condition
+     *      'where' => [], //filter condition
      *      'order' => [['name', 'asc'], ['value','desc']],
      *      'limit' => [0,100],
-     *      -'key' => 'name', // attribute name
-     *      -'access' => true // check read access
+     *      'key' => 'name', // attribute name
+     *      'access' => true // check read access
      * ];
      * </code>
      * @return array
@@ -58,11 +58,10 @@ class Data implements IActivate
     static function find($cond)
     {
         $cond = self::normalizeCond($cond);
-        $result = [];
         if ($store = self::getStore($cond['from'])) {
-            $result = $store->find($cond);
+            return $store->find($cond);
         }
-        return $result;
+        return [];
     }
 
 

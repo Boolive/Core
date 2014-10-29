@@ -119,60 +119,8 @@ class FilesystemStore implements IStore
                         array_pop($stack);
                     } while ($stack);
                 }
-
-
-//                if ($dh = opendir($dir)) {
-//                    $stack = [['dir' => $dir, 'name' => '', 'dh' => $dh, 'depth' => $cond['depth'], 'parent' => $cond['from']]];
-//                    do {
-//                        $curr = end($stack);
-//                        while (($name = readdir($curr['dh'])) !== false) {
-//                            if (!isset($ignore[$name])) {
-//                                $uri = ($curr['name']==='')? $curr['parent'] : $curr['parent'].'/'.$curr['name'];
-//                                // Чтение объекта
-//                                if ($name == $curr['name'].'.info') {
-//                                    if (!($obj = Buffer::get_entity($uri))) {
-//                                        if (!($info = Buffer::get_info($uri))) {
-//                                            // Все сведения об объекте в формате json (если нет класса объекта)
-//                                            $f = file_get_contents($curr['dir'].$name);
-//                                            $info = json_decode($f, true);
-//                                            if ($error = json_last_error()) {
-//                                                throw new \Exception('Ошибка в "' . $curr['dir'].$name . '"');
-//                                            }
-//                                            $info['uri'] = $uri;
-//                                            if (!isset($info['is_default_logic'])) $info['is_default_logic'] = true;
-//                                            $info['is_exists'] = true;
-//                                        }
-//                                        if ($info && empty($info['is_property'])) {
-//                                            $info = Buffer::set_info($info);
-//                                            $obj = Data::entity($info);
-//                                        }
-//                                    }
-//                                    // Проверка объекта на соответствие услвоию [where]
-//                                    if ($obj && !$obj->is_property()) {
-//                                        if (!$cond['where'] || $obj->verify($cond['where'])) {
-//                                            $objects[] = $obj;
-//                                        }
-//                                    }
-//                                } else
-//                                // Поиск подчиненных объектов
-//                                if ($curr['depth'] && is_dir($path = $curr['dir'] . $name)) {
-//                                    if ($dh = opendir($path . '/')) {
-//                                        $stack[] = ['dir' => $path . '/', 'name' => $name, 'dh' => $dh, 'depth' => $curr['depth'] - 1, 'parent' => $uri];
-//                                        $curr = end($stack);
-//                                    }
-//                                }
-//                            }
-//                        }
-//                        closedir($curr['dh']);
-//                        // Возврат к предыдущей директории для продолжения её перебора
-//                        array_pop($stack);
-//                    } while ($stack);
-//                }
             }
         }catch (\Exception $e){
-//            if (isset($stack)){
-//                foreach ($stack as $s) closedir($s['dh']);
-//            }
         }
 
         // key, access

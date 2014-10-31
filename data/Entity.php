@@ -771,6 +771,16 @@ class Entity
     }
 
     /**
+     * Глубина объекта
+     * Равна количеству родителей
+     * @return int
+     */
+    function depth()
+    {
+        return mb_substr_count($this->_attributes['uri'], '/');
+    }
+
+    /**
      * Вызов несуществующего метода
      * Если объект внешний, то вызов произведет модуль секции объекта
      * @param string $method

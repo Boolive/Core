@@ -155,7 +155,34 @@ class FilesystemStore implements IStore
         // calc
 
         // struct
-
+        if ($cond['struct'] == 'tree'){
+            $first_level = mb_substr_count($cond['from'],'/')+1;
+            $tree = [];
+            $result = [];
+            foreach ($objects as $obj){
+                $tree[$obj->uri()] = ['object' => $obj];
+                if ($obj->depth() == $first_level){
+                    $key = $cond['key']? $obj->attr($cond['key']) : null;
+                    if ($key){
+                        $result[$key] = &$tree[$obj->uri()];
+                    }else{
+                        $result[] = &$tree[$obj->uri()];
+                    }
+                }
+            }
+            foreach ($tree as $uri => $obj) {
+                $key = $cond['key'] ? $obj['object']->attr($cond['key']) : null;
+                $p = $obj['object']->attr('parent');
+                if (isset($tree[$p])) {
+                    if ($key) {
+                        $tree[$p]['sub'][$key] = &$tree[$uri];
+                    } else {
+                        $tree[$p]['sub'][] = &$tree[$uri];
+                    }
+                }
+            }
+            return $result;
+        }
         return $objects;
     }
 

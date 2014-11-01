@@ -740,9 +740,254 @@ class Entity
         return empty($this->_changes);
     }
 
+    /**
+     * Проверка объекта соответствию указанному условию
+     * <code>
+     * [                                   // услвоия поиска объединенные логическим AND
+     *    ['uri', '=', '?'],               // сравнение атрибута
+     *    ['not', [                        // отрицание всех вложенных условий (в примере одно)
+     *         ['value', 'like', '%?%']    // сравнение атрибута value с шаблоном %?%
+     *    ]],
+     *    ['any', [                        // условия объединенные логическим OR
+     *         ['child', [                 // проверка подчиенного объекта
+     *             ['name', '=', 'price'], // имя подчиненного объекта (атрибут name)
+     *             ['value', '<', 100],
+     *         ]]
+     *     ]],
+     *     ['is', '/library/object']        // кем объект является? проверка наследования
+     * )
+     * @param array|string $cond Условие как для поиска
+     * @throws \Exception
+     * @return bool
+     */
     function verify($cond)
     {
-        return true;
+        if (empty($cond)) return true;
+        if (is_string($cond)) $cond = Data::condStringToArray($cond);
+        if (count($cond)==1 && is_array($cond[0])){
+            $cond = $cond[0];
+        }
+        if (is_array($cond[0])) $cond = array('all', $cond);
+        switch (strtolower($cond[0])){
+            case 'all':
+                if (count($cond)>2){
+                    unset($cond[0]);
+                    $cond[1] = $cond;
+                }
+                foreach ($cond[1] as $c){
+                    if (!$this->verify($c)) return false;
+                }
+                return true;
+            case 'any':
+                if (count($cond)>2){
+                    unset($cond[0]);
+                    $cond[1] = $cond;
+                }
+                foreach ($cond[1] as $c){
+                    if ($this->verify($c)) return true;
+                }
+                return !sizeof($cond[1]);
+            case 'not':
+                return !$this->verify($cond[1]);
+            // Проверка подчиненного
+            case 'child':
+                $child = $this->{$cond[1]};
+                if ($child->is_exists()){
+                    if (isset($cond[2])){
+                        return $child->verify($cond[2]);
+                    }
+                    return true;
+                }
+                return false;
+            // Проверка наследника
+//            case 'heir':
+//                $heir = $this->{$cond[1]};
+//                if ($heir->is_exists()){
+//                    if (isset($cond[2])){
+//                        return $heir->verify($cond[2]);
+//                    }
+//                    return true;
+//                }
+//                return false;
+            // Эквивалентность указанному объекту
+            case 'eq':
+                if (is_array($cond[1])){
+                    $cond = $cond[1];
+                }else{
+                    unset($cond[0]);
+                }
+                foreach ($cond as $proto){
+                    if ($this->eq($proto)) return true;
+                }
+                return false;
+            // Является ли подчиенным для указанного объекта или eq()
+            case 'in':
+                if (is_array($cond[1])){
+                    $cond = $cond[1];
+                }else{
+                    unset($cond[0]);
+                }
+                foreach ($cond as $parent){
+                    if ($this->in($parent)) return true;
+                }
+                return false;
+            // Является ли наследником указзаного объекта или eq()
+            case 'is':
+                if (is_array($cond[1])){
+                    $cond = $cond[1];
+                }else{
+                    unset($cond[0]);
+                }
+                foreach ($cond as $proto){
+                    if ($this->is($proto)) return true;
+                }
+                return false;
+            // in || is
+            case 'of':
+                if (is_array($cond[1])){
+                    $cond = $cond[1];
+                }else{
+                    unset($cond[0]);
+                }
+                foreach ($cond as $obj){
+                    if ($this->of($obj)) return true;
+                }
+                return false;
+            case 'child_of':
+                if (is_array($cond[1])){
+                    $cond = $cond[1];
+                }else{
+                    unset($cond[0]);
+                }
+                foreach ($cond as $parent){
+                    if ($this->child_of($parent)) return true;
+                }
+                return false;
+            case 'heir_of':
+                if (is_array($cond[1])){
+                    $cond = $cond[1];
+                }else{
+                    unset($cond[0]);
+                }
+                foreach ($cond as $proto){
+                    if ($this->heir_of($proto)) return true;
+                }
+                return false;
+            case 'is_my':
+                return $this->is_my();
+            case 'access':
+                return $this->is_accessible($cond[1]);
+            // Остальные параметры считать атрибутами - условия на затрибт
+            default:
+                if ($cond[0] == 'attr') array_shift($cond);
+                if (sizeof($cond) < 2){
+                    $cond[1] = '!=';
+                    $cond[2] = 0;
+                }
+                if (isset($this->_attributes[$cond[0]]) || array_key_exists($cond[0], $this->_attributes)){
+                    $value = $this->_attributes[$cond[0]];
+                }else{
+                    $value = null;
+                }
+                switch ($cond[1]){
+                    case '=': return $value == $cond[2];
+                    case '<': return $value < $cond[2];
+                    case '>': return $value > $cond[2];
+                    case '>=': return $value >= $cond[2];
+                    case '<=': return $value <= $cond[2];
+                    case '!=':
+                    case '<>': return $value != $cond[2];
+                    case 'like':
+                        $pattern = strtr($cond[2], array('%' => '*', '_' => '?'));
+                        return fnmatch($pattern, $value);
+                    case 'in':
+                        if (!is_array($cond[2])) $cond[2] = array($cond[2]);
+                        return in_array($value, $cond[2]);
+                }
+                return false;
+        }
+    }
+
+    /**
+     * Сравнение с дргуим объектом (экземпляром) по uri
+     * @param Entity $object
+     * @return bool
+     */
+    function eq($object)
+    {
+        if ($object instanceof Entity){
+            return $this->uri() === $object->uri();
+        }
+        return isset($object) && ($this->uri() === $object);
+    }
+
+    /**
+     * Проверка, является ли подчиненным для указанного родителя?
+	 * @param string|Entity $parent Экземпляр родителя или его идентификатор
+     * @return bool
+     */
+    function in($parent)
+    {
+        if (!$this->is_exists() || ($parent instanceof Entity && !$parent->is_sxists())) return false;
+        if ($this->eq($parent)) return true;
+        return $this->child_of($parent);
+    }
+
+    /**
+     * Проверка, являектся наследником указанного прототипа?
+     * @param string|Entity $proto Экземпляр прототипа или его идентификатор
+     * @return bool
+     */
+    function is($proto)
+    {
+        if ($proto == 'all') return true;
+        if ($this->eq($proto)) return true;
+        return $this->heir_of($proto);
+    }
+
+    /**
+     * Проверка, является подчиенным или наследником для указанного объекта?
+     * @param string|Entity $object Объект или идентификатор объекта, с котоым проверяется наследство или родительство
+     * @return bool
+     */
+    function of($object)
+    {
+        return $this->in($object) || $this->is($object);
+    }
+
+    /**
+     * Провкра, является ли подчиненным для указанного объекта?
+     * @param $object
+     * @return bool
+     */
+    function child_of($object)
+    {
+        if ($object instanceof Entity){
+            $object = $object->uri();
+        }
+        return $object.'/' == mb_substr($this->uri(),0,mb_strlen($object)+1);
+    }
+
+    /**
+     * Провкра, является ли наследником для указанного объекта?
+     * @param $object
+     * @return bool
+     */
+    function heir_of($object)
+    {
+        return ($p = $this->proto()) ? $p->is($object) : false;
+    }
+
+    /**
+     * Проверка авторства объекта у текущего пользователя
+     * @return bool
+     */
+    function is_my()
+    {
+        if ($author = $this->author()){
+            //return $author->eq(Auth::getUser());
+        }
+        return false;
     }
 
     /**

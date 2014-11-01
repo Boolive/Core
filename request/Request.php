@@ -299,44 +299,23 @@ class Request implements IActivate, \ArrayAccess, \Countable
      * Создание URL на основе текущего.
      * Если не указан ни один параметр, то возвращается URL текущего запроса
      * @param null|string|array $path Путь uri. Если не указан, то используется текущий путь
-     * @param int $shift С какого парметра пути текущего URL делать замену на $path
      * @param array $args Массив аргументов.
      * @param bool $append Добавлять ли текущие аргументы к новым?
      * @param bool|string $host Добавлять ли адрес сайта. Если true, то добавляет адрес текущего сайта. Можно строкой указать другой сайт
      * @param string $schema Схема url. Указывается, если указан $host
      * @return string
      */
-    static function url($path = null, $shift = 0, $args = [], $append = false, $host = false, $schema = 'http://')
+    static function url($path = null, $args = [], $append = false, $host = false, $schema = 'http://')
     {
-        if (is_string($path)){
-			$path = explode('/',trim($path,'/'));
-		}
-        if (!isset($path)) $path = [];
-        $url = '';
-        if (isset($path[0]) && $path[0] == 'contents'){
-            array_shift($path);
+        // Путь. Если null, то текущий
+        if (!isset($path)){
+            $path = self::$source['REQUEST']['path'];
         }
-        // Параметры
-        // Текущие параметры (текщего адреса) заменяем на указанные в $params
-        $cur_path = self::$source['PATH'];
-        $index = sizeof($cur_path);
-        if (is_array($path) and sizeof($path) > 0){
-            foreach ($path as $index => $value){
-                $cur_path[$index + $shift] = $value;
-            }
-            $index+=$shift + 1;
-        }else
-        if ($shift > 0){
-            $index = $shift;
+        // Если начинается с /contents, то обрезать
+        if (mb_substr($path,0,9) == '/contents'){
+            $path = mb_substr($path,10);
         }
-        // Все текущие параметры после поcледнего из измененных отсекаются
-        for ($i = 0; $i < $index; $i++){
-            if (isset($cur_path[$i])){
-                $url.=$cur_path[$i].'/';
-            }else{
-                $url.='/';
-            }
-        }
+        $url = trim($path,'/');
 		// Аргументы
 		if (!isset($args)){
             $args = self::$source['SERVER']['argv'];
@@ -346,10 +325,6 @@ class Request implements IActivate, \ArrayAccess, \Countable
             }
         }
         if (isset($args['path'])) unset($args['path']);
-		if (strlen($url) > 0){
-            if (mb_substr($url,0,1)=='/') $url = mb_substr($url,1);
-			$url = rtrim($url,'/');
-		}
         if (is_array($args)){
 			foreach ($args as $name => $value){
 				$url .= '&'.$name.($value!==''?'='.$value:'');

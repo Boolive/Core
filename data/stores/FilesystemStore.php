@@ -160,7 +160,7 @@ class FilesystemStore implements IStore
             $tree = [];
             $result = [];
             foreach ($objects as $obj){
-                $tree[$obj->uri()] = ['object' => $obj];
+                $tree[$obj->uri()] = ['object' => $obj, 'sub' => []];
                 if ($obj->depth() == $first_level){
                     $key = $cond['key']? $obj->attr($cond['key']) : null;
                     if ($key){
@@ -183,6 +183,8 @@ class FilesystemStore implements IStore
             }
             return $result;
         }
+
+
         return $objects;
     }
 

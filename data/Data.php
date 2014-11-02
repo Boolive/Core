@@ -399,6 +399,33 @@ class Data implements IActivate
         return $cond;
     }
 
+    /**
+     * Объединение условий
+     * @param $cond1
+     * @param $cond2
+     * @param bool $or
+     */
+    static function unionCond($cond1, $cond2, $or = false)
+    {
+        foreach ($cond2 as $key => $param){
+            if (!isset($cond1[$key])){
+                $cond1[$key] = $param;
+            }else
+            if ($key == 'order'){
+                $cond1[$key] = array_merge($cond1[$key], $param);
+            }else
+            if ($key == 'where'){
+                $cond1[$key] = self::unionCondWhere($cond1[$key], $param, $or);
+            }
+        }
+        return $cond1;
+    }
+
+    static function unionCondWhere($where1, $where2, $or = false)
+    {
+        return $where1;
+    }
+
     static function entity($info)
     {
         $key = isset($info['uri'])? $info['uri'] : null;

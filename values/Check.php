@@ -365,12 +365,12 @@ class Check
         if (!$value instanceof Entity){
             $error = new Error('Не является объектом данных "\boolive\core\data\Entity"', 'entity');
         }else
-//        if (!empty($cond) && !$value->verify($cond)){
-//            $error = new Error('Объект не соответсвует заданному условию', 'entity');
-//        }else
-//        if (!$value->isExist()){
-//            $error = new Error('Объект не существует', 'entity');
-//        }else
+        if (!empty($cond) && !$value->verify($cond)){
+            $error = new Error('Объект не соответсвует заданному условию', 'entity');
+        }else
+        if (!$value->is_exists()){
+            $error = new Error('Объект не существует', 'entity');
+        }else
         if (!$value->is_accessible()){
             $error = new Error('Объект недоступен для чтения', 'entity');
         }else{

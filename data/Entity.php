@@ -928,7 +928,7 @@ class Entity
      */
     function in($parent)
     {
-        if (!$this->is_exists() || ($parent instanceof Entity && !$parent->is_sxists())) return false;
+        if (!$this->is_exists() || ($parent instanceof Entity && !$parent->is_exists())) return false;
         if ($this->eq($parent)) return true;
         return $this->child_of($parent);
     }
@@ -975,7 +975,7 @@ class Entity
      */
     function heir_of($object)
     {
-        return ($p = $this->proto()) ? $p->is($object) : false;
+        return ($p = $this->proto(null, true)) ? $p->is($object) : false;
     }
 
     /**

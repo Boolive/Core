@@ -71,8 +71,8 @@ class Benchmark implements IActivate
             if ($format){
                 return array(
                     'time' => sprintf('%0.8f s', self::$stop[$key]['time']),
-                    'memory' => sprintf('%0.3f kB', self::$stop[$key]['memory'] / 1024),
-                    'memory_max' => sprintf('%0.3f kB', self::$stop[$key]['memory_max'] / 1024),
+                    'memory' => sprintf('%0.3f Mb', self::$stop[$key]['memory'] / 1048576),
+                    'memory_max' => sprintf('%0.3f Mb', self::$stop[$key]['memory_max'] / 1048576),
                 );
             }else{
                 return self::$stop[$key];

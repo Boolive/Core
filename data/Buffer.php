@@ -68,6 +68,8 @@ class Buffer
                 if (is_scalar($child)) $child = ['value' => $child];
                 $child['name'] = $name;
                 $child['is_property'] = true;
+                if (!empty($child['value'])) $child['is_default_value'] = false;
+                if (!empty($child['file'])) $child['is_default_file'] = false;
                 if (!isset($child['is_default_logic'])) $child['is_default_logic'] = true;
                 if (!isset($child['created']) && isset($info['created'])) $child['created'] = $info['created'];
                 if (!isset($child['updated']) && isset($info['updated'])) $child['updated'] = $info['updated'];

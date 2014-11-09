@@ -6,6 +6,7 @@
  */
 namespace boolive\core\data;
 
+use boolive\core\errors\Error;
 use boolive\core\file\File;
 use boolive\core\functions\F;
 use boolive\core\values\Rule;
@@ -30,7 +31,8 @@ class Entity
         'created'      => 0,
         'updated'      => 0,
         'value'	 	   => '',
-        'is_file'      => false,
+        'file'         => '',
+        //'is_file'      => false,
         'is_draft'	   => false,
         'is_hidden'	   => false,
         'is_mandatory' => false,
@@ -38,6 +40,7 @@ class Entity
         'is_relative'  => false,
         'is_link'      => false,
         'is_default_value' => true,
+        'is_default_file'  => true,
         'is_default_logic' => true,
         //'is_completed' => false,
         'is_accessible'=> true,
@@ -61,6 +64,8 @@ class Entity
     protected $_link;
     /** @var Entity|bool|null Экземпляр объекта-прототипа, от которого наследуется значение или false, если значение своё */
     protected $_def_value;
+    /** @var Entity|bool|null Экземпляр объекта-прототипа, от которого наследуется файл или false, если файл свой */
+    protected $_def_file;
     /** @var Entity|bool|null Экземпляр объекта-прототипа, чей класс используется или false, если нет класс свой */
     protected $_def_logic;
     /**
@@ -90,7 +95,7 @@ class Entity
                 if (is_scalar($child)) $child = ['value' => $child];
                 $child['name'] = $name;
                 $child['is_property'] = true;
-                if (!isset($child['is_default_logic'])) $child['is_default_logic'] = true;
+//                if (!isset($child['is_default_logic'])) $child['is_default_logic'] = true;
                 if (!isset($child['created']) && isset($info['created'])) $child['created'] = $info['created'];
                 if (!isset($child['updated']) && isset($info['updated'])) $child['updated'] = $info['updated'];
                 $child['is_exists'] = $info['is_exists'];
@@ -141,7 +146,7 @@ class Entity
             'created'      => Rule::int(), // Дата создания в секундах
             'updated'      => Rule::int(), // Дата обновления в секундах
             'value'	 	   => Rule::string()->max(65535), // Значение до 65535 сиволов
-            'is_file'	   => Rule::bool(), // Признак, привязан ли файл?
+            //'is_file'	   => Rule::bool(), // Признак, привязан ли файл?
             'is_draft'	   => Rule::bool(), // Признак, в черновике или нет?
             'is_hidden'	   => Rule::bool(), // Признак, скрытый или нет?
             'is_mandatory' => Rule::bool(), // Признак, обязательный или дополненый?
@@ -150,24 +155,28 @@ class Entity
 //            'is_completed' => Rule::bool(), // Признак, дополнен объект свойствами прототипа или нет?
             'is_link'      => Rule::bool(), // Ссылка или нет?
             'is_default_value' => Rule::bool(), // Признак, используется значение прототипа или своё?
+            'is_default_file'  => Rule::bool(), // Признак, используется файл прототипа или свой?
             'is_default_logic' => Rule::bool(), // Признак, используется класс прототипа или свой?
-            // Сведения о загружаемом файле. Не является атрибутом объекта, но используется при сохранении
-            'file'	=> Rule::arrays([
-                'tmp_name'	=> Rule::string(), // Путь на связываемый файл
-                'name'		=> Rule::lowercase()->ospatterns('*.*')->ignore('lowercase')->required(), // Имя файла, из которого будет взято расширение
-                'size'		=> Rule::int(), // Размер в байтах
-                'error'		=> Rule::int()->eq(0, true), // Код ошибки. Если 0, то ошибки нет
-                'type'      => Rule::string(), // MIME тип файла
-                'content'   => Rule::string()
+            // Имя файла или сведения о загружаемом файле
+            'file'	=> Rule::any([
+                Rule::string()->regexp('/[^\\/\\]+/ui'), // имя файла
+                Rule::arrays([
+                    'tmp_name'	=> Rule::string(), // Путь на связываемый файл
+                    'name'		=> Rule::lowercase()->ospatterns('*.*')->ignore('lowercase')->required(), // Имя файла, из которого будет взято расширение
+                    'size'		=> Rule::int(), // Размер в байтах
+                    'error'		=> Rule::int()->eq(0, true), // Код ошибки. Если 0, то ошибки нет
+                    'type'      => Rule::string(), // MIME тип файла
+                    'content'   => Rule::string()
+                ])
             ]),
-            // Сведения о классе объекта (загружаемый файл или программный код). Не является атрибутом объекта
-            'logic' => Rule::arrays([
-                'content'   => Rule::string(), // Программный код класса
-                'tmp_name'	=> Rule::string(), // Путь на файл, если класс загржается в виде файла
-                'size'		=> Rule::int(), // Размер в байтах
-                'error'		=> Rule::int()->eq(0, true), // Код ошибки. Если 0, то ошибки нет
-                'type'      => Rule::string() // MIME тип файла
-            ])
+//            // Сведения о классе объекта (загружаемый файл или программный код). Не является атрибутом объекта
+//            'logic' => Rule::arrays([
+//                'content'   => Rule::string(), // Программный код класса
+//                'tmp_name'	=> Rule::string(), // Путь на файл, если класс загржается в виде файла
+//                'size'		=> Rule::int(), // Размер в байтах
+//                'error'		=> Rule::int()->eq(0, true), // Код ошибки. Если 0, то ошибки нет
+//                'type'      => Rule::string() // MIME тип файла
+//            ])
         ]);
     }
 
@@ -374,6 +383,9 @@ class Entity
     {
         if (isset($new) && ($this->_attributes['value'] != $new)){
             $this->_attributes['value'] = (bool)$new;
+            $this->_attributes['is_default_value'] = false;
+            $this->_def_value = null;
+            $this->_changes['is_default_value'] = true;
             $this->_changes['value'] = true;
         }
         if (($proto = $this->is_default_value(null, true)) && $proto->is_exists()){
@@ -393,8 +405,7 @@ class Entity
         // Установка нового файла
         if (isset($new)){
             if (empty($new)){
-                unset($this->_attributes['file']);
-                $this->_attributes['is_file'] = false;
+                $this->_attributes['file'] = '';
             }else{
                 if (is_string($new)){
                     $new = [
@@ -408,22 +419,20 @@ class Entity
                     $new['name'] = $this->name().'.'.File::fileExtention($this->file());
                 }
                 $this->_attributes['file'] = $new;
-                $this->_attributes['is_file'] = true;
             }
-            $this->_attributes['is_default_value'] = false;
-            $this->_changes['value'] = true;
-            $this->_changes['is_file'] = true;
+            $this->_def_file = null;
             $this->_changes['file'] = true;
-            $this->_changes['is_default_value'] = true;
+            $this->_changes['is_default_file'] = true;
         }
         // Возврат пути к текущему файлу, если есть
         if ($this->is_file()){
-            if (($proto = $this->is_default_value(null, true)) && $proto->is_exists()){
-                $file = $proto->file(null, $root);
-                return $file;
+            if (($proto = $this->is_default_file(null, true)) && $proto->is_exists()){
+                return $proto->file(null, $root);
             }else{
-                $file = $this->dir($root);
-                return $file.$this->_attributes['value'];
+                if (is_array($this->_attributes['file'])){
+                    return $this->_attributes['file'];
+                }
+                return $this->dir($root).$this->_attributes['file'];
             }
         }
         return null;
@@ -481,16 +490,15 @@ class Entity
      * @param bool $new Новое значение признака
      * @return bool
      */
-    function is_file($new = null)
+    function is_file()
     {
-        if (isset($new) && ($this->_attributes['is_file'] != $new)){
-            $this->_attributes['is_file'] = (bool)$new;
-            $this->_changes['is_file'] = true;
+        if (!empty($this->_attributes['file'])){
+            return true;
         }
-        if (($proto = $this->is_default_value(null, true)) && $proto->is_exists()){
+        if (($proto = $this->is_default_file(null, true)) && $proto->is_exists()){
            return $proto->is_file();
         }
-        return $this->_attributes['is_file'];
+        return false;
     }
 
     /**
@@ -603,7 +611,6 @@ class Entity
             $this->_changes['is_default_value'] = true;
             if ($this->_attributes['is_default_value']){
                 $this->_attributes['value'] = null;
-                $this->_attributes['is_file'] = null;
             }
         }
         if ($return_entity){
@@ -618,6 +625,35 @@ class Entity
             return $this->_def_value;
         }
         return $this->_attributes['is_default_value'];
+    }
+
+    /**
+     * Признак, файл наследуется от прототипа?
+     * @param bool $new Новое значение признака
+     * @param bool $return_entity Признак, возвращать объект вместо uri
+     * @return bool|Entity
+     */
+    function is_default_file($new = null, $return_entity = false)
+    {
+        if (isset($new) && ($this->_attributes['is_default_file'] != $new)){
+            $this->_attributes['is_default_file'] = (bool)$new;
+            $this->_changes['is_default_file'] = true;
+            if ($this->_attributes['is_default_file']){
+                $this->_attributes['file'] = '';
+            }
+        }
+        if ($return_entity){
+            if (!isset($this->_def_file)){
+                if (empty($this->_attributes['is_default_file'])){
+                    $this->_def_file = false;
+                }else
+                if (($this->_def_file = $this->proto(null, true))){
+                    if ($p = $this->_def_file->is_default_file(null, true)) $this->_def_file = $p;
+                }
+            }
+            return $this->_def_file;
+        }
+        return $this->_attributes['is_default_file'];
     }
 
     /**

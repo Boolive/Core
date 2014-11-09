@@ -432,7 +432,7 @@ class Data implements IActivate
         if (!isset($key) || !($entity = Buffer::get_entity($key))){
             try{
                 $name = basename($info['uri']);
-                if (isset($info['uri']) && (empty($info['uri']) || preg_match('#^[a-zA-Z_0-9\/]+$#ui', $info['uri']))){
+                if (isset($info['uri'])){
                     if (!empty($info['is_default_logic'])){
                         if (isset($info['proto'])){
                             // Класс от прототипа
@@ -442,15 +442,19 @@ class Data implements IActivate
                             $class = '\boolive\core\data\Entity';
                         }
                     }else{
-                        $namespace = str_replace('/', '\\', rtrim($info['uri'],'/'));
-                        // Свой класс
-                        if (empty($namespace)){
-                            $class = '\\project';
-                        }else
-                        if (substr($namespace,0,7) === '\\vendor'){
-                            $class = substr($namespace,7).'\\'.$name;
+                        if (empty($info['uri']) || preg_match('#^[a-zA-Z_0-9\/]+$#ui', $info['uri'])) {
+                            $namespace = str_replace('/', '\\', rtrim($info['uri'], '/'));
+                            // Свой класс
+                            if (empty($namespace)) {
+                                $class = '\\project';
+                            } else
+                                if (substr($namespace, 0, 7) === '\\vendor') {
+                                    $class = substr($namespace, 7) . '\\' . $name;
+                                } else {
+                                    $class = $namespace . '\\' . $name;
+                                }
                         }else{
-                            $class = $namespace.'\\'.$name;
+                            $class = '\boolive\core\data\Entity';
                         }
                     }
                 }else{

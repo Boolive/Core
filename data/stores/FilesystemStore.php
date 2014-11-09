@@ -36,6 +36,14 @@ class FilesystemStore implements IStore
                         $info = file_get_contents($file);
                         $info = json_decode($info, true);
                         $info['uri'] = $uri;
+                        if (!empty($info['file'])){
+                            $info['is_default_file'] = false;
+//                            $info['is_file'] = true;
+//                            $info['value'] = $info['file'];
+                        }
+                        if (!empty($info['logic'])){
+                            $info['is_default_logic'] = false;
+                        }
                         if (!isset($info['is_default_logic'])) $info['is_default_logic'] = true;
                         $info['is_exists'] = true;
                         // Инфо о свойствах в буфер
@@ -92,6 +100,14 @@ class FilesystemStore implements IStore
                                                     throw new \Exception('Ошибка в "' . $curr['dir'].$name . '"');
                                                 }
                                                 $info['uri'] = $uri;
+                                                if (!empty($info['file'])){
+                                                    $info['is_default_file'] = false;
+//                                                    $info['is_file'] = true;
+//                                                    $info['value'] = $info['file'];
+                                                }
+                                                if (!empty($info['logic'])){
+                                                    $info['is_default_logic'] = false;
+                                                }
                                                 if (!isset($info['is_default_logic'])) $info['is_default_logic'] = true;
                                                 $info['is_exists'] = true;
                                             }

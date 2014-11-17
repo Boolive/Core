@@ -4,11 +4,9 @@
  *
  * @version 2.0
  * @author Vladimir Shestakov <boolive@yandex.ru>
- * @todo При установке проверить возмоэжность записи в файл конфига
  */
 namespace boolive\core\events;
 
-use boolive\core\Core;
 use boolive\core\config\Config;
 use boolive\core\IActivate;
 
@@ -16,120 +14,51 @@ class Events implements IActivate
 {
     /** @var array Реестр обработчиков событий */
     private static $handlers = [];
-    /** @var bool Признак, требуется ли выпонить сохранение обработчиков в файл */
-    private static $need_save = false;
 
     /**
      * Активация модуля
      */
     static function activate()
     {
-        self::load();
-        self::on('Core::deactivate', '\boolive\core\events\Events', 'deactivate', false);
-    }
-
-    /**
-     * Обработчик системного события deactivate (завершение работы системы)
-     */
-    static function deactivate()
-    {
-        if (self::$need_save) self::save();
+        self::$handlers = Config::read('events');
     }
 
     /**
      * Добавление обработчика события
      *
-     * @param string $event_name Имя события
-     * @param string $handler_module Имя класса обработчика события
-     * @param string $handler_method Имя метода класса обработчика события
-     * @param bool $save Признак, сохранять регистрацию на событие?
-     * @param bool $once Признак, одноразовая обработка события или нет?
+     * @param string $event Имя события
+     * @param string $handler Обработчик события
      */
-    static function on($event_name, $handler_module, $handler_method, $save = false, $once = false)
+    static function on($event, $handler)
     {
-        self::$handlers[$event_name][] = array($handler_module, $handler_method, 'save' => $save, 'once' => $once);
-        if ($save) self::$need_save = true;
-    }
-
-    /**
-     * Удаление обработчика события
-     *
-     * @param string $event_name Имя события
-     * @param string $handler_module Имя класса обработчика события
-     * @param string $handler_method Имя метода модуля обработчика события
-     */
-    static function off($event_name, $handler_module, $handler_method)
-    {
-        if (isset(self::$handlers[$event_name])){
-            $list = self::$handlers[$event_name];
-            foreach ($list as $key => $handler){
-                if (($handler[0] == $handler_module) && ($handler[1] == $handler_method)){
-                    unset(self::$handlers[$event_name][$key]);
-                    if (!empty($handler['save'])) self::$need_save = true;
-                }
-            }
-        }
+        self::$handlers[$event][] = $handler;
     }
 
     /**
      * Генерация события
      *
-     * @param string $event_name Имя события
+     * @param string $event Имя события
      * @param array|mixed $params Параметры события
-     * @return EventResult Объект события с результатами его обработки
+     * @param bool $all
+     * @return mixed Объект события с результатами его обработки
      */
-    static function trigger($event_name, $params=[])
+    static function trigger($event, $params = [], $all = true)
     {
-        $r = new EventResult();
-        if (isset(self::$handlers[$event_name])){
-            $cnt = sizeof(self::$handlers[$event_name]);
-            for ($i = 0; $i < $cnt; $i++){
-//                if (!is_array($params)){
-//                    $params = array($params);
-//                }
-                if (is_string(self::$handlers[$event_name][$i][0]) && !Core::isIncluded(self::$handlers[$event_name][$i][0])){
-                    Core::activate(self::$handlers[$event_name][$i][0]);
+        $result = [];
+        if (isset(self::$handlers[$event])) {
+            foreach (self::$handlers[$event] as $key => $handler) {
+                if (isset($handler[0]) && (empty($handler[0]) || mb_strpos($handler[0], '/') !== false)) {
+                    $out = call_user_func_array([\boolive\core\data\Data::read($handler[0]), $handler[1]], $params);
+                } else {
+                    $out = call_user_func_array($handler, $params);
                 }
-                if (method_exists(self::$handlers[$event_name][$i][0], self::$handlers[$event_name][$i][1])){
-                    $value = call_user_func_array(array(self::$handlers[$event_name][$i][0], self::$handlers[$event_name][$i][1]), $params);
-                    if (isset($value)) $r->result = $value;
-                    $r->count++;
-                    if (!empty(self::$handlers[$event_name]['once'])){
-                        self::off($event_name, self::$handlers[$event_name][$i][0], self::$handlers[$event_name][$i][1]);
-                    }
-                }
+                if ($out !== false && !$all) return $out;
+                $result[$key] = $out;
             }
         }
-        return $r;
-    }
-
-    /**
-     * Загрузка реестра обработчиков событий
-     */
-    private static function load()
-    {
-        self::$handlers = Config::read('events');
-    }
-
-    /**
-     * Сохранение реестра обработчиков событий
-     */
-    private static function save()
-    {
-        $content = [];
-        $list = self::$handlers;
-        foreach ($list as $event => $handlers){
-            $content[$event] = [];
-            $cnt = sizeof($handlers);
-            for ($i = 0; $i < $cnt; $i++){
-                // Если не указано о сохранени или явно указано сохранять
-                if (!isset($handlers[$i]['save']) || !empty($handlers[$i]['save'])){
-                    $content[$event][] = $handlers[$i];
-                }
-            }
-            if (empty($content[$event])) unset($content[$event]);
+        if (count($result) ==0 && !$all){
+            return null;
         }
-        Config::write('events', $content, false);
-        self::$need_save = false;
+        return $result;
     }
 }

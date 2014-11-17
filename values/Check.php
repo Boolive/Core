@@ -41,42 +41,46 @@ class Check
     /**
      * Универсальный фильтр значения по правилу
      * @param mixed $value Значение для проверки и фильтра
-     * @param null|\boolive\core\values\Rule $rule Объект правила
+     * @param array|\boolive\core\values\Rule $filters Объект правила
      * @param null|Error &$error Возвращаемый объект исключения, если значение не соответсвует типу
      * @return mixed
      */
-    static function filter($value, $rule, &$error = null)
+    static function filter($value, $filters, &$error = null)
     {
         $result = null;
-        if ($rule instanceof Rule){
-            $filters = $rule->getFilters();
-            // Подготовка специальных Фильтров. Удаление из общего списка обработки
-            if (isset($filters['required'])) unset($filters['required']);
-            if (isset($filters['default']))	unset($filters['default']);
-            if (isset($filters['ignore'])){
-                $ignore = $filters['ignore'];
-                if (sizeof($ignore) == 1 && is_array($ignore[0])) $ignore = $ignore[0];
-                unset($filters['ignore']);
-            }else{
-                $ignore = [];
-            }
-            // Фильтр значений
-            foreach ($filters as $filter => $args){
-                $value = self::$filter($value, $error, $rule);
-                if ($error){
-                    if ($ignore && in_array($error->getCode(), $ignore)){
-                        $error = null;
-                    }else{
-                        break;
-                    }
+        if ($filters instanceof Rule){
+            $filters = $filters->getFilters();
+        }
+        // Подготовка специальных Фильтров. Удаление из общего списка обработки
+        if (isset($filters['required'])) unset($filters['required']);
+        if (isset($filters['default'])){
+            $default = $filters['default'];
+            unset($filters['default']);
+        }
+        if (isset($filters['ignore'])){
+            $ignore = $filters['ignore'];
+            if (sizeof($ignore) == 1 && is_array($ignore[0])) $ignore = $ignore[0];
+            unset($filters['ignore']);
+        }else{
+            $ignore = [];
+        }
+        // Фильтр значений
+        foreach ($filters as $filter => $args){
+            $value = self::$filter($value, $error, $args);
+            if ($error){
+                if ($ignore && in_array($error->getCode(), $ignore)){
+                    $error = null;
+                }else{
+                    break;
                 }
             }
-            // Значение по умолчанию, если определено и имеется ошибка
-            if ($error && isset($rule->default)){
-                $error = null;
-                $value = $rule->default[0];
-            }
         }
+        // Значение по умолчанию, если определено и имеется ошибка
+        if ($error && isset($default)){
+            $error = null;
+            $value = $default[0];
+        }
+
         return $value;
     }
 
@@ -88,22 +92,18 @@ class Check
      */
     static function __callStatic($method, $args)
     {
-        $result = Events::trigger('Check::filter_'.$method, $args);
-        if ($result->count > 0){
-            return $result->result;
-        }else{
-            return $args[0];
-        }
+        $args[1] = &$args[1]; // needed for call_user_function()
+        return Events::trigger('Check::'.$method, $args, false);
     }
 
     /**
      * Проверка и фильтр логического значения
      * @param mixed $value Значение для проверки и фильтра
      * @param null|Error &$error Возвращаемый объект исключения, если значение не соответсвует типу
-     * @param \boolive\core\values\Rule $rule Объект правила. Аргументы одноименного фильтра применяются в методе
+     * @param array $args Аргументы фильтра
      * @return bool
      */
-    static function bool($value, &$error, Rule $rule)
+    static function bool($value, &$error, $args)
     {
         if ($value===true || $value===false){
             return $value;
@@ -122,10 +122,10 @@ class Check
      * Проверка и фильтр целого числа в диапазоне от -2147483648 до 2147483647
      * @param mixed $value Значение для проверки и фильтра
      * @param null|Error &$error Возвращаемый объект исключения, если значение не соответсвует типу
-     * @param \boolive\core\values\Rule $rule Объект правила. Аргументы одноименного фильтра применяются в методе
+     * @param array $args Аргументы фильтра
      * @return int|string
      */
-    static function int($value, &$error, Rule $rule)
+    static function int($value, &$error, $args)
     {
         if (is_string($value)){
             $value = str_replace(' ', '', $value);
@@ -145,10 +145,10 @@ class Check
      * Проверка и фильтр действительного числа в диапазоне от -1.7976931348623157E+308 до 1.7976931348623157E+308
      * @param mixed $value Значение для проверки и фильтра
      * @param null|Error &$error Возвращаемый объект исключения, если значение не соответсвует типу
-     * @param \boolive\core\values\Rule $rule Объект правила. Аргументы одноименного фильтра применяются в методе
+     * @param array $args Аргументы фильтра
      * @return int|string
      */
-    static function double($value, &$error, Rule $rule)
+    static function double($value, &$error, $args)
     {
         if (is_string($value)){
             $value = str_replace(' ', '', $value);
@@ -165,10 +165,10 @@ class Check
      * Проверка и фильтр строки
      * @param mixed $value Значение для проверки и фильтра
      * @param null|Error &$error Возвращаемый объект исключения, если значение не соответсвует типу
-     * @param \boolive\core\values\Rule $rule Объект правила. Аргументы одноименного фильтра применяются в методе
+     * @param array $args Аргументы фильтра
      * @return string
      */
-    static function string($value, &$error, Rule $rule)
+    static function string($value, &$error, $args)
     {
         if (isset($value) && is_scalar($value)){
             return strval($value);
@@ -182,10 +182,10 @@ class Check
      * Нескалярные значения превращаются в 0
      * @param mixed $value Значение для проверки и фильтра
      * @param null|Error &$error Возвращаемый объект исключения, если значение не соответсвует типу
-     * @param \boolive\core\values\Rule $rule Объект правила. Аргументы одноименного фильтра применяются в методе
+     * @param array $args Аргументы фильтра
      * @return string
      */
-    static function scalar($value, &$error, Rule $rule)
+    static function scalar($value, &$error, $args)
     {
         if (isset($value) && is_scalar($value)){
             return $value;
@@ -198,10 +198,10 @@ class Check
      * Проверка и фильтр NULL
      * @param mixed $value Значение для проверки и фильтра
      * @param null|Error &$error Возвращаемый объект исключения, если значение не соответсвует типу
-     * @param \boolive\core\values\Rule $rule Объект правила. Аргументы одноименного фильтра применяются в методе
+     * @param array $args Аргументы фильтра
      * @return null
      */
-    static function null($value, &$error, Rule $rule)
+    static function null($value, &$error, $args)
     {
         if (isset($value)/* && !(is_string($value) && in_array(strtolower($value), ['null']))*/){
             $error = new Error('Должно быть неопределённым (null)', 'null');
@@ -213,10 +213,10 @@ class Check
      * Проверка и фильтр массива с учетом правил на его элементы
      * @param mixed $value Значение для проверки и фильтра
      * @param null|Error &$error Возвращаемый объект исключения, если элементы не соответсвуют правилам
-     * @param \boolive\core\values\Rule $rule Объект правила. Аргументы одноименного фильтра применяются в методе
+     * @param array $args Аргументы фильтра
      * @return array
      */
-    static function arrays($value, &$error, Rule $rule)
+    static function arrays($value, &$error, $args)
     {
         $result = [];
         if (is_array($value)){
@@ -228,7 +228,7 @@ class Check
             $rule_sub = [];
             $rule_default = null;
             $tree = false;
-            foreach ($rule->arrays as $arg){
+            foreach ($args as $arg){
                 if (is_array($arg)){
                     $rule_sub = $arg;
                 }else
@@ -262,7 +262,7 @@ class Check
                         // Если рекурсивная проверка вложенных массивов
                         if ($tree && (is_array($v) || $v instanceof Values)){
                             $sub_error = null;
-                            $result[$key] = self::filter($v, $rule, $sub_error);
+                            $result[$key] = self::filter($v, $args, $sub_error);
                         }
                     }
                     // Если на элемент нет правила, то его не будет в результате
@@ -297,12 +297,12 @@ class Check
      * Проверка значения на соответствие объекту опредленного класса
      * @param mixed $value Значение для проверки
      * @param null|Error &$error Возвращаемый объект исключения, если значение не соответсвует типу
-     * @param \boolive\core\values\Rule $rule Объект правила. Аргументы одноименного фильтра применяются в методе
+     * @param array $args Аргументы фильтра
      * @return object|null
      */
-    static function object($value, &$error, Rule $rule)
+    static function object($value, &$error, $args)
     {
-        $class = isset($rule->object[0])? $rule->object[0] : null;
+        $class = isset($args[0])? $args[0] : null;
         if (is_object($value) && (empty($class) || $value instanceof $class)){
             return $value;
         }
@@ -314,10 +314,10 @@ class Check
      * Проверка значения на соответствие объекту класса \boolive\core\values\Values
      * @param mixed $value Значение для проверки
      * @param null|Error &$error Возвращаемый объект исключения, если значение не соответсвует типу
-     * @param \boolive\core\values\Rule $rule Объект правила. Аргументы одноименного фильтра применяются в методе
+     * @param array $args Аргументы фильтра
      * @return \boolive\core\values\Values Любое значение превразается в объект \boolive\core\values\Values
      */
-    static function values($value, &$error, Rule $rule)
+    static function values($value, &$error, $args)
     {
         if ($value instanceof Values){
             return $value;
@@ -331,12 +331,12 @@ class Check
      * Если значение строка, то значение будет воспринято как uri объекта данных, и будет попытка выбора объекта из бд.
      * @param mixed $value Значение для проверки
      * @param null|Error &$error Возвращаемый объект исключения, если значение не соответсвует типу
-     * @param \boolive\core\values\Rule $rule Объект правила. Аргументы одноименного фильтра применяются в методе
+     * @param array $args Аргументы фильтра
      * @return \boolive\core\data\Entity|null
      */
-    static function entity($value, &$error, Rule $rule)
+    static function entity($value, &$error, $args)
     {
-        $cond = isset($rule->entity[0])? $rule->entity[0] : false;
+        $cond = isset($args[0])? $args[0] : false;
         if (!is_object($value)){
             if (is_string($value) && substr($value, 0,1) == '{'){
                 $value = json_decode($value, true);
@@ -385,16 +385,16 @@ class Check
      * Если ниодно правило не подходит, то возвращается ошибка и значение от последнего правила.
      * @param mixed $value Значение для проверки
      * @param null|Error &$error Возвращаемый объект исключения, если значение не соответсвует правилу
-     * @param \boolive\core\values\Rule $rule Объект правила. Аргументы одноименного фильтра применяются в методе
+     * @param array $args Аргументы фильтра
      * @return mixed|null
      */
-    static function any($value, &$error, Rule $rule)
+    static function any($value, &$error, $args)
     {
-        $rules = $rule->any;
-        if (empty($rules)) return $value;
-        if (sizeof($rules) == 1 && is_array(reset($rules))) $rules = reset($rules);
+//        $rules = $rule->any;
+        if (empty($args)) return $value;
+        if (sizeof($args) == 1 && is_array(reset($args))) $args = reset($args);
         $result = null;
-        foreach ($rules as $rule){
+        foreach ($args as $rule){
             $error = null;
             $result = self::filter($value, $rule, $error);
             if (!$error) return $result;
@@ -406,12 +406,12 @@ class Check
      * Максимально допустимое значение, длина или количество элементов. Правая граница отрезка
      * @param mixed $value Фильтруемое значение
      * @param null|Error &$error Возвращаемый объект исключения, если значение не соответсвует правилу
-     * @param \boolive\core\values\Rule $rule Объект правила. Аргументы одноименного фильтра применяются в методе
+     * @param array $args Аргументы фильтра
      * @return mixed
      */
-    static function max($value, &$error, Rule $rule)
+    static function max($value, &$error, $args)
     {
-        $max = isset($rule->max[0])? $rule->max[0] : null;
+        $max = isset($args[0])? $args[0] : null;
         if (is_int($value) || is_double($value)){
             $result = min($max, $value);
             if ($value != $result) $error = new Error(['Требуется не больше %s', $max], 'max');
@@ -433,12 +433,12 @@ class Check
      * Минимально допустимое значение, длина или количество элементов. Левая граница отрезка
      * @param mixed $value Фильтруемое значение
      * @param null|Error &$error Возвращаемый объект исключения, если значение не соответсвует правилу
-     * @param \boolive\core\values\Rule $rule Объект правила. Аргументы одноименного фильтра применяются в методе
+     * @param array $args Аргументы фильтра
      * @return mixed
      */
-    static function min($value, &$error, Rule $rule)
+    static function min($value, &$error, $args)
     {
-        $min = isset($rule->min[0])? $rule->min[0] : null;
+        $min = isset($args[0])? $args[0] : null;
         $result = $value;
         if (is_int($value) || is_double($value)){
             $result = max($min, $value);
@@ -457,12 +457,12 @@ class Check
      * Меньше указанного значения, длины или количества элементов. Правая граница интервала
      * @param mixed $value Фильтруемое значение
      * @param null|Error &$error Возвращаемый объект исключения, если значение не соответсвует правилу
-     * @param \boolive\core\values\Rule $rule Объект правила. Аргументы одноименного фильтра применяются в методе
+     * @param array $args Аргументы фильтра
      * @return mixed
      */
-    static function less($value, &$error, Rule $rule)
+    static function less($value, &$error, $args)
     {
-        $less = isset($rule->less[0])? $rule->less[0] : null;
+        $less = isset($args[0])? $args[0] : null;
         if ((is_int($value) || is_double($value)) && !($value < $less)){
             $result = $less - 1;
             if ($value != $result) $error = new Error(['Требуется меньше %s', $less], 'less');
@@ -484,12 +484,12 @@ class Check
      * Больше указанного значения, длины или количества элементов. Левая граница интервала
      * @param mixed $value Фильтруемое значение
      * @param null|Error &$error Возвращаемый объект исключения, если значение не соответсвует правилу
-     * @param \boolive\core\values\Rule $rule Объект правила. Аргументы одноименного фильтра применяются в методе
+     * @param array $args Аргументы фильтра
      * @return mixed
      */
-    static function more($value, &$error, Rule $rule)
+    static function more($value, &$error, $args)
     {
-        $more = isset($rule->more[0])? $rule->more[0] : null;
+        $more = isset($args[0])? $args[0] : null;
         if ((is_int($value) || is_double($value)) && !($value > $more)){
             $value = $more + 1;
             $error = new Error(['Требуется больше %s', $more], 'more');
@@ -511,13 +511,13 @@ class Check
      * Проверка на равенство указанному значению
      * @param mixed $value Проверяемое значение
      * @param null|Error &$error Возвращаемый объект исключения, если значение не соответсвует правилу
-     * @param \boolive\core\values\Rule $rule Объект правила. Аргументы одноименного фильтра применяются в методе
+     * @param array $args Аргументы фильтра
      * @return mixed
      */
-    static function eq($value, &$error, Rule $rule)
+    static function eq($value, &$error, $args)
     {
-        $eq = isset($rule->eq[0])? $rule->eq[0] : null;
-        $strong = isset($rule->eq[1])? $rule->eq[1] : false;
+        $eq = isset($args[0])? $args[0] : null;
+        $strong = isset($args[1])? $args[1] : false;
         if (!(($strong && $value===$eq) || (!$strong && $value==$eq))){
             $error = new Error(['Должно равняться %s', [$eq]], 'eq');
             $value = $eq;
@@ -529,12 +529,12 @@ class Check
      * Проверка на неравенство указанному значению
      * @param mixed $value Проверяемое значение
      * @param null|Error &$error Возвращаемый объект исключения, если значение не соответсвует правилу
-     * @param \boolive\core\values\Rule $rule Объект правила. Аргументы одноименного фильтра применяются в методе
+     * @param array $args Аргументы фильтра
      * @return mixed
      */
-    static function not($value, &$error, Rule $rule)
+    static function not($value, &$error, $args)
     {
-        $not = isset($rule->not[0])? $rule->not[0] : null;
+        $not = isset($args[0])? $args[0] : null;
         if ($value==$not){
             $value = null;
             $error = new Error(['Не должно равняться %s', [$not]], 'not');
@@ -546,14 +546,13 @@ class Check
      * Допустимые значения. Через запятую или массив
      * @param mixed $value Фильтруемое значение
      * @param null|Error &$error Возвращаемый объект исключения, если значение не соответсвует правилу
-     * @param \boolive\core\values\Rule $rule Объект правила. Аргументы одноименного фильтра применяются в методе
+     * @param array $args Аргументы фильтра
      * @return mixed
      */
-    static function in($value, &$error, Rule $rule)
+    static function in($value, &$error, $args)
     {
-        $list = $rule->in;
-        if (sizeof($list) == 1 && is_array($list[0])) $list = $list[0];
-        if (!in_array($value, $list)){
+        if (sizeof($args) == 1 && is_array($args[0])) $args = $args[0];
+        if (!in_array($value, $args)){
             $value = null;
             $error = new Error('Значение не в списке допустимых', 'in');
         }
@@ -564,14 +563,13 @@ class Check
      * Недопустимые значения. Через запятую или массив
      * @param mixed $value Фильтруемое значение
      * @param null|Error &$error Возвращаемый объект исключения, если значение не соответсвует правилу
-     * @param \boolive\core\values\Rule $rule Объект правила. Аргументы одноименного фильтра применяются в методе
+     * @param array $args Аргументы фильтра
      * @return mixed
      */
-    static function not_in($value, &$error, Rule $rule)
+    static function not_in($value, &$error, $args)
     {
-        $list = $rule->not_in;
-        if (sizeof($list) == 1 && is_array($list[0])) $list = $list[0];
-        if (in_array($value, $list)){
+        if (sizeof($args) == 1 && is_array($args[0])) $args = $args[0];
+        if (in_array($value, $args)){
             $value = null;
             $error = new Error('Значение в списке запрещенных', 'not_in');
         }
@@ -582,10 +580,10 @@ class Check
      * Обрезание строки
      * @param mixed $value Фильтруемое значение
      * @param null|Error &$error Возвращаемый объект исключения, если значение не соответсвует правилу
-     * @param \boolive\core\values\Rule $rule Объект правила. Аргументы одноименного фильтра применяются в методе
+     * @param array $args Аргументы фильтра
      * @return mixed
      */
-    static function trim($value, &$error, Rule $rule)
+    static function trim($value, &$error, $args)
     {
         if (is_scalar($value)){
             $result = trim($value);
@@ -599,13 +597,13 @@ class Check
      * Экранирование html символов
      * @param mixed $value Фильтруемое значение
      * @param null|Error &$error Возвращаемый объект исключения, если значение не соответсвует правилу
-     * @param \boolive\core\values\Rule $rule Объект правила. Аргументы одноименного фильтра применяются в методе
+     * @param array $args Аргументы фильтра
      * @return mixed
      */
-    static function escape($value, &$error, Rule $rule)
+    static function escape($value, &$error, $args)
     {
         if (is_scalar($value)){
-            if (empty($rule->escape[1])){
+            if (empty($args[1])){
                 $result = htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
             }else{
                 $result = htmlentities($value, ENT_QUOTES, 'UTF-8');
@@ -620,13 +618,13 @@ class Check
      * Вырезание html тегов
      * @param mixed $value Фильтруемое значение
      * @param null|Error &$error Возвращаемый объект исключения, если значение не соответсвует правилу
-     * @param \boolive\core\values\Rule $rule Объект правила. Аргументы одноименного фильтра применяются в методе
+     * @param array $args Аргументы фильтра
      * @return mixed
      */
-    static function strip_tags($value, &$error, Rule $rule)
+    static function strip_tags($value, &$error, $args)
     {
         if (is_scalar($value)){
-            $tags = $rule->strip_tags[1];
+            $tags = $args[1];
             $result = strip_tags($value, $tags);
             if ($result != $value) $error = new Error('Содержит запрещенные HTML теги', 'strip_tags');
             return $result;
@@ -638,10 +636,10 @@ class Check
      * Email адрес
      * @param mixed $value Фильтруемое значение
      * @param null|Error &$error Возвращаемый объект исключения, если значение не соответсвует правилу
-     * @param \boolive\core\values\Rule $rule Объект правила. Аргументы одноименного фильтра применяются в методе
+     * @param array $args Аргументы фильтра
      * @return mixed
      */
-    static function email($value, &$error, Rule $rule)
+    static function email($value, &$error, $args)
     {
         if (!is_string($value) || ($value!=='' && !filter_var($value, FILTER_VALIDATE_EMAIL))){
             $error = new Error('Некорректный email адрес', 'email');
@@ -653,10 +651,10 @@ class Check
      * URL
      * @param mixed $value Фильтруемое значение
      * @param null|Error &$error Возвращаемый объект исключения, если значение не соответсвует правилу
-     * @param \boolive\core\values\Rule $rule Объект правила. Аргументы одноименного фильтра применяются в методе
+     * @param array $args Аргументы фильтра
      * @return mixed
      */
-    static function url($value, &$error, Rule $rule)
+    static function url($value, &$error, $args)
     {
         if (!is_string($value) || ($value!=='' && !filter_var($value, FILTER_VALIDATE_URL))){
             $error = new Error('Некорректный URL', 'url');
@@ -669,10 +667,10 @@ class Check
      * Может быть целым числом
      * @param mixed $value Фильтруемое значение
      * @param null|Error &$error Возвращаемый объект исключения, если значение не соответсвует правилу
-     * @param \boolive\core\values\Rule $rule Объект правила. Аргументы одноименного фильтра применяются в методе
+     * @param array $args Аргументы фильтра
      * @return mixed
      */
-    static function uri($value, &$error, Rule $rule)
+    static function uri($value, &$error, $args)
     {
         if (is_string($value) || is_int($value)){
             if (empty($value) || trim($value, '/')===''){
@@ -692,10 +690,10 @@ class Check
      * IP
      * @param mixed $value Фильтруемое значение
      * @param null|Error &$error Возвращаемый объект исключения, если значение не соответсвует правилу
-     * @param \boolive\core\values\Rule $rule Объект правила. Аргументы одноименного фильтра применяются в методе
+     * @param array $args Аргументы фильтра
      * @return mixed
      */
-    static function ip($value, &$error, Rule $rule)
+    static function ip($value, &$error, $args)
     {
         if (!is_string($value) || ($value!=='' && !filter_var($value, FILTER_VALIDATE_IP))){
             $error = new Error('Некорректный IP адрес', 'ip');
@@ -707,15 +705,15 @@ class Check
      * Проверка на совпадение одному из регулярных выражений
      * @param mixed $value Фильтруемое значение
      * @param null|Error &$error Возвращаемый объект исключения, если значение не соответсвует правилу
-     * @param \boolive\core\values\Rule $rule Объект правила. Аргументы одноименного фильтра применяются в методе
+     * @param array $args Аргументы фильтра
      * @return mixed
      */
-    static function regexp($value, &$error, Rule $rule)
+    static function regexp($value, &$error, $args)
     {
         if (is_scalar($value)){
-            $patterns = $rule->regexp;
-            if (sizeof($patterns) == 1 && is_array($patterns[0])) $patterns = $patterns[0];
-            foreach ($patterns as $pattern){
+//            $patterns = $args;
+            if (sizeof($args) == 1 && is_array($args[0])) $args = $args[0];
+            foreach ($args as $pattern){
                 if (empty($pattern)) return $value;
                 if (preg_match($pattern, $value)) return $value;
             }
@@ -728,15 +726,14 @@ class Check
      * Проверка на совпадения одному из паттернов в стиле оболочки операционной системы: "*gr[ae]y"
      * @param mixed $value Фильтруемое значение
      * @param null|Error &$error Возвращаемый объект исключения, если значение не соответсвует правилу
-     * @param \boolive\core\values\Rule $rule Объект правила. Аргументы одноименного фильтра применяются в методе
+     * @param array $args Аргументы фильтра
      * @return mixed
      */
-    static function ospatterns($value, &$error, Rule $rule)
+    static function ospatterns($value, &$error, $args)
     {
         if (is_scalar($value)){
-            $patterns = $rule->ospatterns;
-            if (sizeof($patterns) == 1 && is_array($patterns[0])) $patterns = $patterns[0];
-            foreach ($patterns as $pattern){
+            if (sizeof($args) == 1 && is_array($args[0])) $patterns = $args[0];
+            foreach ($args as $pattern){
                 if (fnmatch($pattern, $value)) return $value;
             }
         }
@@ -748,10 +745,10 @@ class Check
      * HEX формат числа из 6 или 3 символов. Код цвета #FFFFFF. Возможны сокращения и опущение #
      * @param mixed $value Фильтруемое значение
      * @param null|Error &$error Возвращаемый объект исключения, если значение не соответсвует правилу
-     * @param \boolive\core\values\Rule $rule Объект правила. Аргументы одноименного фильтра применяются в методе
+     * @param array $args Аргументы фильтра
      * @return mixed
      */
-    static function color($value, &$error, Rule $rule)
+    static function color($value, &$error, $args)
     {
         if (is_scalar($value)){
             $value = trim($value, ' #');
@@ -767,10 +764,10 @@ class Check
      * Строка в нижнем регистре
      * @param mixed $value Фильтруемое значение
      * @param null|Error &$error Возвращаемый объект исключения, если значение не соответсвует правилу
-     * @param \boolive\core\values\Rule $rule Объект правила. Аргументы одноименного фильтра применяются в методе
+     * @param array $args Аргументы фильтра
      * @return string
      */
-    static function lowercase($value, &$error, Rule $rule)
+    static function lowercase($value, &$error, $args)
     {
         $result = mb_strtolower($value, 'utf-8');
         if ($value != $result){
@@ -783,10 +780,10 @@ class Check
      * Строка в верхнем регистре
      * @param mixed $value Фильтруемое значение
      * @param null|Error &$error Возвращаемый объект исключения, если значение не соответсвует правилу
-     * @param \boolive\core\values\Rule $rule Объект правила. Аргументы одноименного фильтра применяются в методе
+     * @param array $args Аргументы фильтра
      * @return string
      */
-    static function uppercase($value, &$error, Rule $rule)
+    static function uppercase($value, &$error, $args)
     {
         $result = mb_strtoupper($value, 'utf-8');
         if ($value != $result){
@@ -799,12 +796,12 @@ class Check
      * Условие поиска или валидации объекта
      * @param mixed $value Фильтруемое значение
      * @param null|Error &$error Возвращаемый объект исключения, если значение не соответсвует правилу
-     * @param \boolive\core\values\Rule $rule Объект правила. Аргументы одноименного фильтра применяются в методе
+     * @param array $args Аргументы фильтра
      * @return string
      */
-    static function condition($value, &$error, Rule $rule)
+    static function condition($value, &$error, $args)
     {
-        $result = \boolive\core\data\Data2::normalizeCond($value);
+        $result = Data::normalizeCond($value);
         if ($result === null){
             $error = new Error('Не является условием поиска', 'condition');
         }

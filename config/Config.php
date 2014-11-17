@@ -9,14 +9,32 @@
 namespace boolive\core\config;
 
 use boolive\core\functions\F;
+use boolive\core\IActivate;
 
-class Config
+class Config implements IActivate
 {
     /**
      * Признак, использовать ли синтакиси квадратных скобок в опредлении массива
      * @var bool
      */
     static $bracket_syntax = true;
+    static $dirs = [];
+
+
+    static function activate()
+    {
+        $json = file_get_contents(DIR.'vendor/composer/installed.json');
+        $packages = json_decode($json, true);
+        self::$dirs[] = DIR_CONFIG;
+        foreach ($packages as $p){
+            $dir = DIR.'vendor/'.$p['name'].'/config/';
+            echo $dir.'</br>';
+            if (is_dir($dir)){
+                self::$dirs[] = $dir;
+            };
+        }
+    }
+
     /**
      * Получение конфигурации по названию
      * По имени находится файл конфиграции в директрии DIR_CONFIG
@@ -25,11 +43,14 @@ class Config
      */
     static function read($name)
     {
-        try{
-            return include DIR_CONFIG.$name.'.php';
-        }catch (\Exception $e){
-            return [];
+        $config = [];
+        foreach (self::$dirs as $dir){
+            try{
+                $c = include $dir.$name.'.php';
+                $config = array_merge_recursive($config, $c);
+            }catch (\Exception $e){}
         }
+        return $config;
     }
 
     /**

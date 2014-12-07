@@ -19,6 +19,7 @@ class Config implements IActivate
      */
     static $bracket_syntax = true;
     static $dirs = [];
+    static $loaded = [];
 
 
     static function activate()
@@ -28,7 +29,6 @@ class Config implements IActivate
         self::$dirs[] = DIR_CONFIG;
         foreach ($packages as $p){
             $dir = DIR.'vendor/'.$p['name'].'/config/';
-            echo $dir.'</br>';
             if (is_dir($dir)){
                 self::$dirs[] = $dir;
             };
@@ -43,14 +43,17 @@ class Config implements IActivate
      */
     static function read($name)
     {
-        $config = [];
-        foreach (self::$dirs as $dir){
-            try{
-                $c = include $dir.$name.'.php';
-                $config = array_merge_recursive($config, $c);
-            }catch (\Exception $e){}
+        if (!isset(self::$loaded[$name])) {
+            self::$loaded[$name] = [];
+            foreach (self::$dirs as $dir) {
+                try {
+                    $c = include $dir . $name . '.php';
+                    self::$loaded[$name] = array_merge_recursive(self::$loaded[$name], $c);
+                } catch (\Exception $e) {
+                }
+            }
         }
-        return $config;
+        return self::$loaded[$name];
     }
 
     /**

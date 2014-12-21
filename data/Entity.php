@@ -382,7 +382,7 @@ class Entity
     function value($new = null)
     {
         if (isset($new) && ($this->_attributes['value'] != $new)){
-            $this->_attributes['value'] = (bool)$new;
+            $this->_attributes['value'] = $new;
             $this->_attributes['is_default_value'] = false;
             $this->_def_value = null;
             $this->_changes['is_default_value'] = true;

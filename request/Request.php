@@ -17,7 +17,7 @@ use boolive\core\values\Rule;
  */
 class Request implements IActivate, \ArrayAccess, \Countable
 {
-    /** @var \boolive\core\values\Input Исходные входящие данные */
+    /** @var array Исходные входящие данные */
     private static $source;
 
     /**

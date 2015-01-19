@@ -26,6 +26,8 @@ namespace boolive\core {
         /** @var int Текущий уровень фиксации ошибок в настройках PHP */
         static private $error_reporting;
 
+        static private $config;
+
         static function activate(ClassLoader $loader)
         {
             self::$loader = $loader;
@@ -97,7 +99,7 @@ namespace boolive\core {
         {
             // Если обработчики событий не вернут положительный результат, то
             // обрабатываем исключение по умолчанию
-            if (!\boolive\core\events\Events::trigger('Boolive::error', $e)){
+            if (!\boolive\core\events\Events::trigger('Core::error', [$e])){
                 trace_log(get_class($e).' ['.$e->getCode().']: '.$e->getMessage().' in '.$e->getFile().' on line '.$e->getLine());
                 if (isset($e->xdebug_message)){
                     echo '<table cellspacing="0" cellpadding="1" border="1" dir="ltr">'.$e->xdebug_message.'</table>';

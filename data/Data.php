@@ -6,6 +6,7 @@
  */
 namespace boolive\core\data;
 
+use boolive\core\auth\Auth;
 use boolive\core\config\Config;
 use boolive\core\file\File;
 use boolive\core\functions\F;
@@ -27,10 +28,16 @@ class Data implements IActivate
      * @param $uri
      * @return bool|Entity
      */
-    static function read($uri)
+    static function read($uri, $access = false)
     {
         if ($store = self::getStore($uri)) {
-            return $store->read($uri);
+            $obj = $store->read($uri);
+            if ($obj && $obj->is_exists() && $access){
+                if (!Auth::get_user()->check_access('read', $obj)){
+                    $obj = self::create($obj->proto(), $obj->parent(), ['name'=>$obj->name(), 'is_accessible' => false]);
+                }
+            }
+            return $obj;
         }
         return null;
     }
@@ -79,20 +86,20 @@ class Data implements IActivate
      * Создание нового объекта
      * @param Entity|string $proto Прототипируемый объект, на основе которого создаётся новый
      * @param Entity|string $parent Родительский объект, в подчиненным (свойством) которого будет новый объект
-     * @param string|null $name Имя нового объекта
+     * @param array $attr Атрибуты новому объекту
      * @return Entity
      */
-    static function create($proto, $parent, $name = null)
+    static function create($proto, $parent, $attr = [])
     {
         if (!$proto instanceof Entity) $proto = Data::read($proto);
         $class = get_class($proto);
-        $attr = array(
-            'name' => $name ? $name : $proto->name(),
+        $attr = array_replace([
+            'name' => $proto->name(),
             'order' => Entity::MAX_ORDER,
             'is_hidden' => $proto->is_hidden(),
             'is_draft' => $proto->is_draft(),
             'is_property' => $proto->is_property()
-        );
+        ], $attr);
         /** @var $obj Entity */
         $obj = new $class($attr);
         // Уникальность имени

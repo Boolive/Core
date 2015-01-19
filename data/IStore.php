@@ -10,6 +10,10 @@ interface IStore
 {
     function __construct($key, $params);
 
+    /**
+     * @param $uri
+     * @return bool|Entity
+     */
     function read($uri);
 
     function find($cond);

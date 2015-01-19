@@ -9,8 +9,8 @@
 namespace boolive\core\auth;
 
 use boolive\core\config\Config;
-use boolive\core\data\Data,
-    boolive\core\request\Request;
+use boolive\core\data\Data;
+use boolive\core\request\Request;
 use boolive\core\data\Entity;
 use boolive\core\events\Events;
 use boolive\core\IActivate;
@@ -39,7 +39,7 @@ class Auth implements IActivate
 
     /**
      * Текущий пользователь
-     * @return Entity
+     * @return Entity|\boolive\basic\user\user
      */
     static function get_user()
     {

@@ -716,7 +716,7 @@ class Entity
             $this->_children[$name] = Data::read($this->uri().'/'.$name);
             if (!$this->_children[$name]){
                 if (($proto = $this->proto(null, true)) && ($child = $proto->{$name})){
-                    $this->_children[$name] = Data::create($child, $this, $name);
+                    $this->_children[$name] = Data::create($child, $this, ['name'=>$name]);
                 }else{
                     $this->_children[$name] = new Entity([
                         'uri' => $this->uri().'/'.$name,

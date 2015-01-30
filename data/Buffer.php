@@ -11,6 +11,7 @@ class Buffer
 {
     static private $list_entity = [];
     static private $list_info = [];
+    static private $list_props = [];
 
     /**
      * Выбор экземпляра сущности
@@ -63,9 +64,15 @@ class Buffer
      */
     static function set_info($info)
     {
+        if (!isset($info['proto']) && $info['uri'] !='/vendor/boolive/basic/object'){
+            $info['proto'] = '/vendor/boolive/basic/object';
+        }
         if (isset($info['properties'])){
             foreach ($info['properties'] as $name => $child){
-                if (is_scalar($child)) $child = ['value' => $child];
+                if (is_scalar($child) || is_null($child)){
+                    $child = ['value' => $child];
+                    if (isset($info['proto'])) $child['proto'] = $info['proto'].'/'.$name;
+                }
                 $child['name'] = $name;
                 $child['is_property'] = true;
                 if (!empty($child['value'])) $child['is_default_value'] = false;
@@ -75,6 +82,7 @@ class Buffer
                 if (!isset($child['updated']) && isset($info['updated'])) $child['updated'] = $info['updated'];
                 $child['is_exists'] = $info['is_exists'];
                 $child['uri'] = $info['uri'].'/'.$name;
+                self::$list_props[$info['uri']][$name] = $child['uri'];
                 self::set_info($child);
             }
             unset($info['properties']);
@@ -82,6 +90,15 @@ class Buffer
         self::$list_info[$info['uri']] = $info;
         return $info;
     }
+
+    static function get_props($uri)
+    {
+        if (isset(self::$list_props[$uri])) {
+            return self::$list_props[$uri];
+        }
+        return null;
+    }
+
 
     /**
      * Удалениеинформации о сущности из буфера

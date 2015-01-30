@@ -387,7 +387,7 @@ class Request implements IActivate, \ArrayAccess, \Countable
      */
     public function count()
     {
-        return count($this->filtered[$offset]);
+        return count($this->filtered);
     }
 
     public function __debugInfo()

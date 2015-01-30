@@ -77,6 +77,9 @@ class Entity
     /** @var string Текущее имя перед сохранением, если изменялось */
     protected $_current_name;
 
+    /** @var bool Признак, свойство внутренне или нет */
+    protected $_is_inner = false;
+
     /**
      * Конструктор
      * @param array $info Атрибуты объекта и свойства
@@ -720,6 +723,7 @@ class Entity
                 }else{
                     $this->_children[$name] = new Entity([
                         'uri' => $this->uri().'/'.$name,
+                        'proto' => $this->proto().'/'.$name,
                         'is_property' => true
                     ]);
                 }
@@ -766,6 +770,12 @@ class Entity
     #                 Entity                   #
     #                                          #
     ############################################
+
+    function check()
+    {
+        return true;
+    }
+
 
     /**
      * Признак, изменены атрибуты объекта или нет
@@ -1032,6 +1042,13 @@ class Entity
      */
     function errors()
     {
+        if (!$this->_errors){
+            $this->_errors = new Error('Ошибки', $this->name(), null, true);
+            // Связывание с ошибками родительского объекта. Образуется целостная иерархия ошибок
+            if ($this->_parent){
+                $this->_parent->errors()->_children->add($this->_errors, '', true);
+            }
+        }
         return $this->_errors;
     }
 
@@ -1047,6 +1064,35 @@ class Entity
         if (!empty($this->_attributes['is_link']) && ($link = $this->is_link(null, true))){
             if ($clone) $link = clone $link;
             return $link;
+        }
+        return $this;
+    }
+
+    /**
+     * Внутреннй.
+     * Доступ к внутренему объекту, который скрыт в (одном из) прототипе родителя
+     * Объеты не создаются автоматически из-за скрытости их прототипов, но к ним можно получить доступ.
+     * @return $this | Entity Текущий или новый объект, если текущий не существует, но у него есть скрытый прототип
+     */
+    function inner()
+    {
+        if (!$this->is_exists() && /*!$this->_attribs['proto'] && */($p = $this->parent(null, true))){
+            // У прототипов родителя найти свойство с именем $this->name()
+            $find = false;
+            $name = $this->name();
+            $protos = array($this);
+            $parents = array($p);
+            while (($p = $p->proto(null, true)) && !$find){
+                $propertry = $p->{$name};
+                $find = $propertry->is_exists();
+                $protos[] = $propertry;
+                $parents[] = $p;
+            }
+            for ($i = sizeof($protos)-1; $i>0; $i--){
+                $protos[$i-1] = Data::create($protos[$i], $parents[$i-1]);
+                $protos[$i-1]->_is_inner = true;
+            }
+            return $protos[0];
         }
         return $this;
     }
@@ -1083,6 +1129,16 @@ class Entity
     function __toString()
     {
         return (string)$this->value();
+    }
+
+    function __toArray()
+    {
+
+    }
+
+    function __fromArray($array)
+    {
+        return [];
     }
 
     /**

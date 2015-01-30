@@ -220,7 +220,7 @@ class Data implements IActivate
                 }
             }
             if (empty($result['order'])){
-                if ($result['select'] == 'children' || $result['struct'] == 'tree'){
+                if ($result['select'] == 'children' || $result['struct'] == 'tree' || $result['select'] == 'properties'){
                     $result['order'] = [['order', 'asc']];
                 }else{
                     $result['order'] = false;

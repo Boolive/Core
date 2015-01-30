@@ -69,6 +69,24 @@ class FilesystemStore implements IStore
         return $entity;
     }
 
+    /**
+     * @param $cond
+     * <code>
+     * [
+     *      'select' => 'children', //self, children, parents, heirs, protos, child, link
+     *      'calc' => 'count', // false, exists, count, [sum, attr], [max, attr], [min, attr], [avg, attr]
+     *      'from' => '/contents',
+     *      'depth' => 1, // maximum depth
+     *      'struct' => 'array', // value, object, array, tree
+     *      'where' => [], //filter condition
+     *      'order' => [['name', 'asc'], ['value','desc']],
+     *      'limit' => [0,100],
+     *      'key' => 'name', // attribute name
+     *      'access' => true // check read access
+     * ];
+     * </code>
+     * @return array
+     */
     function find($cond)
     {
         // select, from, depth
@@ -76,70 +94,87 @@ class FilesystemStore implements IStore
         $objects =[];
         try {
             if ($cond['depth'] > 0){
-                // Игнорируемые директории/файлы
-                $ignore = array_flip(['.','..','.git']);
-                // Перебор директории в глубь. (Рекурсия на циклах)
-                if ($dh = new \DirectoryIterator($dir)) {
-                    $stack = [['name' => '', 'dh' => $dh, 'depth' => $cond['depth'], 'parent' => $cond['from']]];
-                    do {
-                        $curr = end($stack);
-                        while($curr['dh']->valid()){
-                            /** @var \DirectoryIterator $file */
-                            $file = $curr['dh']->current();
-                            $curr['dh']->next();
-                            if (($name = $file->getFilename())!==''){
-                                if (!isset($ignore[$name])) {
-                                    $uri = ($curr['name']==='')? $curr['parent'] : $curr['parent'].'/'.$curr['name'];
-                                    if ($name == $curr['name'] . '.info') {
-                                        if (!($obj = Buffer::get_entity($uri))) {
-                                            if (!($info = Buffer::get_info($uri))) {
-                                                // Все сведения об объекте в формате json (если нет класса объекта)
-                                                $f = file_get_contents($file->getPathname());
-                                                $info = json_decode($f, true);
-                                                if ($error = json_last_error()) {
-                                                    throw new \Exception('Ошибка в "' . $curr['dir'].$name . '"');
-                                                }
-                                                $info['uri'] = $uri;
-                                                if (!empty($info['file'])){
-                                                    $info['is_default_file'] = false;
-//                                                    $info['is_file'] = true;
-//                                                    $info['value'] = $info['file'];
-                                                }
-                                                if (!empty($info['logic'])){
-                                                    $info['is_default_logic'] = false;
-                                                }
-                                                if (!isset($info['is_default_logic'])) $info['is_default_logic'] = true;
-                                                $info['is_exists'] = true;
-                                            }
-                                            if ($info && empty($info['is_property'])) {
-                                                $info = Buffer::set_info($info);
-                                                $obj = Data::entity($info);
-                                            }
-                                        }
-                                        // Проверка объекта на соответствие услвоию [where]
-                                        if ($obj && !$obj->is_property()) {
-                                            if (!$cond['where'] || $obj->verify($cond['where'])) {
-                                                $objects[] = $obj;
-                                            }
-                                        }
-                                    } else
-                                    if ($curr['depth'] && $file->isDir()) {
-                                        if ($dh = new \DirectoryIterator($file->getPathname())) {
-                                            $stack[] = ['name' => $name, 'dh' => $dh, 'depth' => $curr['depth'] - 1, 'parent' => $uri];
-                                            $curr = end($stack);
-                                        }
-                                    }
+                if ($cond['select'] == 'properties'){
+                    // Читаем, чтобы инфо о свойства попало в буфер
+                    $from = $this->read($cond['from']);
+                    if ($prop_names = Buffer::get_props($cond['from'])){
+                        foreach ($prop_names as $prop_uri){
+                            // Проверка объекта на соответствие услвоию [where]
+                            if ($obj = $this->read($prop_uri)) {
+                                if (!$cond['where'] || $obj->verify($cond['where'])) {
+                                    $objects[] = $obj;
                                 }
                             }
                         }
-                        array_pop($stack);
-                    } while ($stack);
+                    }
+                }else
+                if ($cond['select'] == 'children') {
+                    // Игнорируемые директории/файлы
+                    $ignore = array_flip(['.', '..', '.git']);
+                    // Перебор директории в глубь. (Рекурсия на циклах)
+                    if ($dh = new \DirectoryIterator($dir)) {
+                        $stack = [['name' => '', 'dh' => $dh, 'depth' => $cond['depth'], 'parent' => $cond['from']]];
+                        do {
+                            $curr = end($stack);
+                            while ($curr['dh']->valid()) {
+                                /** @var \DirectoryIterator $file */
+                                $file = $curr['dh']->current();
+                                $curr['dh']->next();
+                                if (($name = $file->getFilename()) !== '') {
+                                    if (!isset($ignore[$name])) {
+                                        $uri = ($curr['name'] === '') ? $curr['parent'] : $curr['parent'] . '/' . $curr['name'];
+                                        if ($name == $curr['name'] . '.info') {
+                                            if (!($obj = Buffer::get_entity($uri))) {
+                                                if (!($info = Buffer::get_info($uri))) {
+                                                    // Все сведения об объекте в формате json (если нет класса объекта)
+                                                    $f = file_get_contents($file->getPathname());
+                                                    $info = json_decode($f, true);
+                                                    if ($error = json_last_error()) {
+                                                        throw new \Exception('Ошибка в "' . $curr['dir'] . $name . '"');
+                                                    }
+                                                    $info['uri'] = $uri;
+                                                    if (!empty($info['file'])) {
+                                                        $info['is_default_file'] = false;
+//                                                    $info['is_file'] = true;
+//                                                    $info['value'] = $info['file'];
+                                                    }
+                                                    if (!empty($info['logic'])) {
+                                                        $info['is_default_logic'] = false;
+                                                    }
+                                                    if (!isset($info['is_default_logic'])) $info['is_default_logic'] = true;
+                                                    $info['is_exists'] = true;
+                                                }
+                                                if ($info && empty($info['is_property'])) {
+                                                    $info = Buffer::set_info($info);
+                                                    $obj = Data::entity($info);
+                                                }
+                                            }
+                                            // Проверка объекта на соответствие услвоию [where]
+                                            if ($obj && !$obj->is_property()) {
+                                                if (!$cond['where'] || $obj->verify($cond['where'])) {
+                                                    $objects[] = $obj;
+                                                }
+                                            }
+                                        } else
+                                            if ($curr['depth'] && $file->isDir()) {
+                                                if ($dh = new \DirectoryIterator($file->getPathname())) {
+                                                    $stack[] = ['name' => $name, 'dh' => $dh, 'depth' => $curr['depth'] - 1, 'parent' => $uri];
+                                                    $curr = end($stack);
+                                                }
+                                            }
+                                    }
+                                }
+                            }
+                            array_pop($stack);
+                        } while ($stack);
+                    }
                 }
             }
         }catch (\Exception $e){
         }
 
-        // key, access
+        // access
+
         // order (not for value and object)
         if ($order = $cond['order']) {
             $order_cnt = count($order);
@@ -170,7 +205,7 @@ class FilesystemStore implements IStore
 
         // calc
 
-        // struct
+        // struct, key
         if ($cond['struct'] == 'tree'){
             $first_level = mb_substr_count($cond['from'],'/')+1;
             $tree = [];

@@ -27,19 +27,19 @@ class Error extends Exception implements IteratorAggregate
 	private static $global_dictionary;
 
     /** @var array Локальный словарь сообщений об ошибках. Дополняет глобальный */
-    private $local_dictionary;
+    protected $local_dictionary;
 
     /** @var array Массив временных подчиненных исключений, к которым обращались для проверки существования */
-    private $temps;
+    protected $temps;
     /** @var bool Признак, является ли исключение временным? */
-    private $is_temp;
+    protected $is_temp;
 
     /** @var Error Родительское  исключение */
-    private $parent;
+    protected $parent;
     /** @var string|int Код исключения */
     protected $code;
     /** @var array Массив вложенных исключений */
-    private $children;
+    protected $children;
     /** @var array Аргументы для вставки в текст сообщения */
     protected $args;
 

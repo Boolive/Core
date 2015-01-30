@@ -27,7 +27,7 @@ class Events implements IActivate
      * Добавление обработчика события
      *
      * @param string $event Имя события
-     * @param string $handler Обработчик события
+     * @param array $handler Обработчик события
      */
     static function on($event, $handler)
     {
@@ -52,8 +52,11 @@ class Events implements IActivate
                 } else {
                     $out = call_user_func_array($handler, $params);
                 }
-                if ($out !== false && !$all) return $out;
-                $result[$key] = $out;
+                if ($out === false){
+                    if (!$all) return $out;
+                }else{
+                    $result[$key] = $out;
+                }
             }
         }
         if (count($result) ==0 && !$all){

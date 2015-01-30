@@ -162,4 +162,38 @@ class Rule
     {
         return $this->filters;
     }
+
+    /**
+     * @param $rule Rule
+     * @return $this
+     */
+    function mix($rule)
+    {
+        $this->merge($this->filters, $rule->getFilters());
+        return $this;
+    }
+
+    private function merge(&$array1, $array2){
+        foreach ($array2 as $key => $item){
+            if (!isset($array1[$key])){
+                $array1[$key] = $item;
+            }else
+            if ($item instanceof Rule ){
+                if ($array1[$key] instanceof Rule){
+                    $array1[$key]->mix($array2[$key]);
+                }else{
+                    $array1[$key] = $item;
+                }
+            }else
+            if (is_array($item)){
+                if (is_array($array1[$key])){
+                    $this->merge($array1[$key], $item);
+                }else{
+                    $array1[$key] = $item;
+                }
+            }else{
+                $array1[$key] = $item;
+            }
+        }
+    }
 }

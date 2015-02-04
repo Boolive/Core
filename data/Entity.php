@@ -10,6 +10,7 @@ use boolive\core\errors\Error;
 use boolive\core\file\File;
 use boolive\core\functions\F;
 use boolive\core\values\Rule;
+use boolive\core\values\Values;
 
 class Entity
 {
@@ -74,9 +75,6 @@ class Entity
      * @var bool|string
      */
     protected $_auto_naming = false;
-    /** @var string Текущее имя перед сохранением, если изменялось */
-    protected $_current_name;
-
     /** @var bool Признак, свойство внутренне или нет */
     protected $_is_inner = false;
 
@@ -162,7 +160,8 @@ class Entity
             'is_default_logic' => Rule::bool(), // Признак, используется класс прототипа или свой?
             // Имя файла или сведения о загружаемом файле
             'file'	=> Rule::any([
-                Rule::string()->regexp('/[^\\/\\]+/ui'), // имя файла
+                Rule::forbidden(),
+                Rule::string()->regexp('/[^\\/\\\\]+/ui'), // имя файла
                 Rule::arrays([
                     'tmp_name'	=> Rule::string(), // Путь на связываемый файл
                     'name'		=> Rule::lowercase()->ospatterns('*.*')->ignore('lowercase')->required(), // Имя файла, из которого будет взято расширение
@@ -224,10 +223,8 @@ class Entity
         if (isset($new) && ($this->_attributes['name'] != $new || $choose_unique)){
             // Фильтр имени
             $new = preg_replace('/\s/ui','_',$new);
-            // Запоминаем текущее имя
-            if (!isset($this->_current_name)) $this->_current_name = $this->_attributes['name'];
-            if ($choose_unique) $this->_auto_naming = $new;
-            $this->_attributes['name'] = $new;
+            $this->change('name', $new);
+            $this->_auto_naming = $choose_unique;
         }
         return $this->_attributes['name'];
     }
@@ -248,12 +245,9 @@ class Entity
                 $this->_parent = null; // for reloading
             }
             if ($new != $this->_attributes['parent']){
-                $this->_attributes['parent'] = $new;
-                $this->_attributes['order'] = Entity::MAX_ORDER;
-                $this->_changes['parent'] = true;
-                $this->_changes['order'] = true;
-                if (!isset($this->_attributes['uri'])) $this->_attributes['uri'] = $new.'/'.$this->_attributes['name'];
-                if ($this->is_exists()) $this->name(null, true);
+                $this->change('parent', $new);
+                $this->change('order', Entity::MAX_ORDER);
+                $this->change('uri', $new.'/'.$this->_attributes['name']);
             }
         }
         if ($return_entity){
@@ -285,8 +279,7 @@ class Entity
                 $this->_proto = null; // for reloading
             }
             if ($new != $this->_attributes['proto']){
-                $this->_attributes['proto'] = $new;
-                $this->_changes['proto'] = true;
+                $this->change('proto', $new);
             }
         }
         if ($return_entity){
@@ -318,8 +311,7 @@ class Entity
                 $this->_author = null; // for reloading
             }
             if ($new != $this->_attributes['author']){
-                $this->_attributes['author'] = $new;
-                $this->_changes['author'] = true;
+                $this->change('author', $new);
             }
         }
         if ($return_entity){
@@ -343,8 +335,7 @@ class Entity
     function order($new = null)
     {
         if (isset($new) && ($this->_attributes['order'] != $new)){
-            $this->_attributes['order'] = (int)$new;
-            $this->_changes['order'] = true;
+            $this->change('order', (int)$new);
         }
         return $this->_attributes['order'];
     }
@@ -357,8 +348,7 @@ class Entity
     function created($new = null)
     {
         if (isset($new) && ($this->_attributes['created'] != $new)){
-            $this->_attributes['created'] = (int)$new;
-            $this->_changes['created'] = true;
+            $this->change('created', (int)$new);
         }
         return $this->_attributes['created'];
     }
@@ -371,8 +361,7 @@ class Entity
     function updated($new = null)
     {
         if (isset($new) && ($this->_attributes['updated'] != $new)){
-            $this->_attributes['updated'] = (int)$new;
-            $this->_changes['updated'] = true;
+            $this->change('updated', (int)$new);
         }
         return $this->_attributes['updated'];
     }
@@ -384,12 +373,10 @@ class Entity
      */
     function value($new = null)
     {
-        if (isset($new) && ($this->_attributes['value'] != $new)){
-            $this->_attributes['value'] = $new;
-            $this->_attributes['is_default_value'] = false;
+        if (isset($new) && ((string)$this->_attributes['value'] != (string)$new)){
+            $this->change('value', $new);
+            $this->change('is_default_value', false);
             $this->_def_value = null;
-            $this->_changes['is_default_value'] = true;
-            $this->_changes['value'] = true;
         }
         if (($proto = $this->is_default_value(null, true)) && $proto->is_exists()){
            return $proto->value();
@@ -408,7 +395,7 @@ class Entity
         // Установка нового файла
         if (isset($new)){
             if (empty($new)){
-                $this->_attributes['file'] = '';
+                $this->change('file', '');
             }else{
                 if (is_string($new)){
                     $new = [
@@ -421,11 +408,10 @@ class Entity
                 if (empty($new['name']) && $this->is_file()){
                     $new['name'] = $this->name().'.'.File::fileExtention($this->file());
                 }
-                $this->_attributes['file'] = $new;
+                $this->change('file', $new);
             }
+            $this->change('is_default_file', false);
             $this->_def_file = null;
-            $this->_changes['file'] = true;
-            $this->_changes['is_default_file'] = true;
         }
         // Возврат пути к текущему файлу, если есть
         if ($this->is_file()){
@@ -457,10 +443,8 @@ class Entity
                     'error'	=> is_file($new)? 0 : true
                 );
             }
-            $this->_attributes['logic'] = $new;
-            $this->_attributes['is_default_logic'] = false;
-            $this->_changes['is_default_logic'] = true;
-            $this->_changes['logic'] = true;
+            $this->change('logic', $new);
+            $this->change('is_default_logic', false);
         }
         if ($proto = $this->is_default_logic(null, true)){
             $path = $proto->logic(null, $root);
@@ -512,8 +496,7 @@ class Entity
     function is_draft($new = null)
     {
         if (isset($new) && ($this->_attributes['is_draft'] != $new)){
-            $this->_attributes['is_draft'] = (bool)$new;
-            $this->_changes['is_draft'] = true;
+            $this->change('is_draft', (bool)$new);
         }
         return $this->_attributes['is_draft'];
     }
@@ -526,8 +509,7 @@ class Entity
     function is_hidden($new = null)
     {
         if (isset($new) && ($this->_attributes['is_hidden'] != $new)){
-            $this->_attributes['is_hidden'] = (bool)$new;
-            $this->_changes['is_hidden'] = true;
+            $this->change('is_hidden', (bool)$new);
         }
         return $this->_attributes['is_hidden'];
     }
@@ -540,8 +522,7 @@ class Entity
     function is_mandatory($new = null)
     {
         if (isset($new) && ($this->_attributes['is_mandatory'] != $new)){
-            $this->_attributes['is_mandatory'] = (bool)$new;
-            $this->_changes['is_mandatory'] = true;
+            $this->change('is_mandatory', (bool)$new);
         }
         return $this->_attributes['is_mandatory'];
     }
@@ -554,8 +535,7 @@ class Entity
     function is_property($new = null)
     {
         if (isset($new) && ($this->_attributes['is_property'] != $new)){
-            $this->_attributes['is_property'] = (bool)$new;
-            $this->_changes['is_property'] = true;
+            $this->change('is_property', (bool)$new);
         }
         return $this->_attributes['is_property'];
     }
@@ -569,8 +549,7 @@ class Entity
     function is_relative($new = null)
     {
         if (isset($new) && ($this->_attributes['is_relative'] != $new)){
-            $this->_attributes['is_relative'] = (bool)$new;
-            $this->_changes['is_relative'] = true;
+            $this->change('is_relative', (bool)$new);
         }
         return $this->_attributes['is_relative'];
     }
@@ -584,8 +563,7 @@ class Entity
     function is_link($new = null, $return_entity = false)
     {
         if (isset($new) && ($this->_attributes['is_link'] != $new)){
-            $this->_attributes['is_link'] = (bool)$new;
-            $this->_changes['is_link'] = true;
+            $this->change('is_link', (bool)$new);
         }
         if ($return_entity){
             if (!isset($this->_link)){
@@ -610,10 +588,9 @@ class Entity
     function is_default_value($new = null, $return_entity = false)
     {
         if (isset($new) && ($this->_attributes['is_default_value'] != $new)){
-            $this->_attributes['is_default_value'] = (bool)$new;
-            $this->_changes['is_default_value'] = true;
+            $this->change('is_default_value', (bool)$new);
             if ($this->_attributes['is_default_value']){
-                $this->_attributes['value'] = null;
+                $this->change('value', null);
             }
         }
         if ($return_entity){
@@ -639,10 +616,9 @@ class Entity
     function is_default_file($new = null, $return_entity = false)
     {
         if (isset($new) && ($this->_attributes['is_default_file'] != $new)){
-            $this->_attributes['is_default_file'] = (bool)$new;
-            $this->_changes['is_default_file'] = true;
+            $this->change('is_default_file', (bool)$new);
             if ($this->_attributes['is_default_file']){
-                $this->_attributes['file'] = '';
+                $this->change('file', '');
             }
         }
         if ($return_entity){
@@ -668,8 +644,7 @@ class Entity
     function is_default_logic($new = null, $return_entity = false)
     {
         if (isset($new) && ($this->_attributes['is_default_logic'] != $new)){
-            $this->_attributes['is_default_logic'] = (bool)$new;
-            $this->_changes['is_default_logic'] = true;
+            $this->change('is_default_logic', (bool)$new);
         }
         if ($return_entity){
             if (!isset($this->_def_logic)){
@@ -703,6 +678,55 @@ class Entity
         return $this->_attributes['is_exists'];
     }
 
+    function is_auto_namig()
+    {
+        return $this->_auto_naming;
+    }
+
+    /**
+     * Есть ли изменения?
+     * Если не указан атрибут, то проверяется изменение в любом атрибуте
+     * @param null|string $attr_name Атрибут, изменения в котором проверяются.
+     * @return bool
+     */
+    function is_changed($attr_name = null)
+    {
+        if (isset($attr_name)){
+            return array_key_exists($attr_name, $this->_changes);
+        }
+        return !empty($this->_changes);
+    }
+
+    /**
+     * Зафиксировать изменение атрибута
+     * Если новое значение эквиалентно исходному, то признак изменения убирается
+     * @param string $attr_name Названия атрибута
+     * @param mixed $new_value Новое значение
+     */
+    function change($attr_name, $new_value)
+    {
+        if (!$this->is_changed($attr_name)){
+            $this->_changes[$attr_name] = $this->_attributes[$attr_name];
+        }else
+        if ($this->_changes[$attr_name] === $new_value){
+            unset($this->_attributes[$attr_name]);
+        }
+        $this->_attributes[$attr_name] = $new_value;
+    }
+
+    /**
+     * Возвращается первоначальное значение атрибута (или всех измененных атрибуты)
+     * @param null|string $attr_name Атрибут, исходное значение которого вернуть
+     * @return array
+     */
+    function changes($attr_name = null)
+    {
+        if (isset($attr_name)){
+            return $this->_changes[$attr_name];
+        }
+        return $this->_changes;
+    }
+
     ############################################
     #                                          #
     #             Properties                   #
@@ -734,7 +758,17 @@ class Entity
 
     public function __set($name, $child)
     {
-
+        if ($child instanceof Entity){
+            $this->_children[$name] = $child;
+            $child->name($name);
+            $child->parent($this);
+            return $child;
+        }else{
+            if (empty($name)) $name = 'entity';
+            // Установка значения для подчиненного
+            $this->__get($name)->value($child);
+            return $this->__get($name);
+        }
     }
 
     public function __isset($name)
@@ -747,11 +781,20 @@ class Entity
 
     }
 
-    public function children($cond = [])
+    /**
+     * @return array
+     */
+    public function children()
     {
-
+        return $this->_children;
     }
 
+    /**
+     * Подчиненный по имени
+     * @param string $name
+     * @param bool $load
+     * @return Entity|bool
+     */
     public function child($name, $load = false)
     {
         if (!isset($this->_children[$name])){
@@ -771,19 +814,47 @@ class Entity
     #                                          #
     ############################################
 
-    function check()
-    {
-        return true;
-    }
-
-
     /**
-     * Признак, изменены атрибуты объекта или нет
-     * @return bool
+     * Проверка корректности объекта по внутренним правилам объекта
+     * Используется перед сохранением
+     * @param bool $children Признак, проверять или нет подчиненных
+     * @return bool Признак, корректен объект (true) или нет (false)
      */
-    function is_changed()
+    function check($children = true)
     {
-        return empty($this->_changes);
+        // "Контейнер" для ошибок по атрибутам и подчиненным объектам
+        //$errors = new Error('Неверный объект', $this->uri());
+        if ($this->_checked) return true;
+
+        // Проверка и фильтр атрибутов
+        $attribs = new Values($this->_attributes);
+        $filtered = array_replace($this->_attributes, $attribs->get($this->rule(), $error));
+        /** @var $error Error */
+        if ($error){
+            //$errors->_attributes->add($error->children());
+            $this->errors()->_attributes->add($error->children());
+        }else{
+            $this->_attributes = $filtered;
+        }
+        // Проверка подчиненных
+        if ($children){
+            foreach ($this->_children as $child){
+                $error = null;
+                /** @var Entity $child */
+                if (!$child->check()){
+                    //$errors->_children->add($error);
+                    $this->errors()->_children->add($child->errors());
+                }
+            }
+        }
+        // Проверка родителем.
+//        if ($p = $this->parent()) $p->checkChild($this);
+        // Если ошибок нет, то удаляем контейнер для них
+        if (!$this->errors()->isExist()){
+            //$errors = null;
+            return $this->_checked = true;
+        }
+        return false;
     }
 
     /**
@@ -1076,7 +1147,7 @@ class Entity
      */
     function inner()
     {
-        if (!$this->is_exists() && /*!$this->_attribs['proto'] && */($p = $this->parent(null, true))){
+        if (!$this->is_exists() && /*!$this->_attributes['proto'] && */($p = $this->parent(null, true))){
             // У прототипов родителя найти свойство с именем $this->name()
             $find = false;
             $name = $this->name();
@@ -1107,6 +1178,52 @@ class Entity
         return mb_substr_count($this->_attributes['uri'], '/');
     }
 
+    function toArray()
+    {
+        $result = array(
+            '_children' => array(),
+            '_attributes' => $this->_attributes,
+            '_changes' => $this->_changes,
+            '_checked' => $this->_checked,
+            '_errors' => $this->_errors && $this->_errors->isExist() ? $this->_errors->toArray(false, array('_children')) : $this->_errors,
+            '_auto_naming' => $this->_auto_naming,
+            '_is_inner' => $this->_is_inner,
+            'class' => get_class($this)
+        );
+        foreach ($this->_children as $key => $child){
+            $result['_children'][$key] = $child->toArray();
+        }
+        return $result;
+    }
+
+    static function fromArray($array)
+    {
+        if (isset($array['_attributes']['uri'])){
+            $obj = Data::read($array['_attributes']['uri']);
+        }else{
+            if (!isset($array['class'])) $array['class'] = '\boolive\core\data\Entity';
+            $obj = new $array['class']();
+        }
+        if (!empty($array['_errors'])){
+            $obj->_errors = Error::createFromArray($array['_errors']);
+        }
+        if (isset($array['_children'])){
+            foreach ($array['_children'] as $key => $child){
+                $obj->_children[$key] = self::fromArray($child);
+                $obj->_children[$key]->_parent = $obj;
+                if ($obj->_children[$key]->_errors){
+                    $obj->errors()->_children->add($obj->_children[$key]->_errors);
+                }
+            }
+        }
+        $obj->_attributes =$array['_attributes'];
+        $obj->_changes = $array['_changes'];
+        $obj->_checked = $array['_checked'];
+        $obj->_auto_naming = $array['_auto_naming'];
+        $obj->_is_inner = $array['_is_inner'];
+        return $obj;
+    }
+
     /**
      * Вызов несуществующего метода
      * Если объект внешний, то вызов произведет модуль секции объекта
@@ -1131,16 +1248,6 @@ class Entity
         return (string)$this->value();
     }
 
-    function __toArray()
-    {
-
-    }
-
-    function __fromArray($array)
-    {
-        return [];
-    }
-
     /**
      * Клонирование объекта
      */
@@ -1155,7 +1262,7 @@ class Entity
      * Информация для var_dump() и trace()
      * @return mixed
      */
-    public function __debugInfo()
+    public function __trace()
     {
         $info['_attributes'] = $this->_attributes;
         $info['_changes'] = $this->_changes;

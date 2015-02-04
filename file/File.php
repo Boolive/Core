@@ -109,8 +109,8 @@ class File implements IActivate
             $to = self::makeVirtualDir($to);
             $dir = dirname($to);
             if (!is_dir($dir)) mkdir($dir, true);
-            if (mb_strtoupper($from)!=mb_strtoupper($to)){
-                if(is_dir($to)){
+            if (mb_strtoupper($from) != mb_strtoupper($to)){
+                if (is_dir($to)){
                     self::clearDir($to, true);
                 }else
                 if (is_file($to)){
@@ -281,6 +281,35 @@ class File implements IActivate
             $to = $dir.$name.(++$i+$start).$ext;
         }
         $result = ($i < 100+$start)? false : $to;
+        self::deleteVirtualDir($dir);
+        return $result;
+    }
+
+    /**
+     * Создание уникальной директории
+     * @param string $dir Директория со слэшем на конце, в которой подобрать уникальное имя
+     * @param string $name Базовое имя, к которому будут добавляться числовые префиксы для уникальности
+     * @param int $start Начальное значение для префикса
+     * @param bool $find Признак подбирать уникальное имя
+     * @return string|bool Уникальное имя вместе с путём или false, если не удалось подобрать
+     */
+    static function makeUniqueDir($dir, $name,  $start = 1, $find = true)
+    {
+        self::makeVirtualDir($dir);
+        $max = $start + 1000;
+        $i = $start;
+        $path = $dir.$name;
+        do {
+            try{
+                if ($result = mkdir($path, 0775, true)){
+                    $result = $path;
+                }
+            }catch (\Exception $e){
+                $result = false;
+            }
+            $path = $dir . $name . $i;
+            $i++;
+        }while($find && !$result && $i < $max);
         self::deleteVirtualDir($dir);
         return $result;
     }

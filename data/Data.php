@@ -8,6 +8,7 @@ namespace boolive\core\data;
 
 use boolive\core\auth\Auth;
 use boolive\core\config\Config;
+use boolive\core\errors\Error;
 use boolive\core\file\File;
 use boolive\core\functions\F;
 use boolive\core\IActivate;
@@ -71,10 +72,23 @@ class Data implements IActivate
         return [];
     }
 
-
-    static function write()
+    /**
+     * Сохранение объекта
+     * @param Entity $entity
+     * @throws \boolive\core\errors\Error
+     * @return bool
+     */
+    static function write($entity)
     {
-
+        if ($entity->check()) {
+            if ($store = self::getStore($entity->uri())) {
+                return $store->write($entity);
+            }else{
+                throw new Error('Неопредлено хранилище объекта','store');
+            }
+        }else{
+            throw $entity->errors();
+        }
     }
 
     static function delete()
@@ -89,7 +103,7 @@ class Data implements IActivate
      * @param array $attr Атрибуты новому объекту
      * @return Entity
      */
-    static function create($proto, $parent, $attr = [])
+    static function create($proto, $parent = null, $attr = [])
     {
         if (!$proto instanceof Entity) $proto = Data::read($proto);
         $class = get_class($proto);

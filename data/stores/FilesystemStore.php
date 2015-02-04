@@ -10,6 +10,7 @@ use boolive\core\data\Buffer;
 use boolive\core\data\Data;
 use boolive\core\data\Entity;
 use boolive\core\data\IStore;
+use boolive\core\errors\Error;
 use boolive\core\file\File;
 use boolive\core\functions\F;
 
@@ -24,7 +25,8 @@ class FilesystemStore implements IStore
     {
         if (!($entity = Buffer::get_entity($uri))){
             // Экземпляра объекта в буфере нет, проверяем массив его атрибутов в буфере
-            if (!($info = Buffer::get_info($uri))){
+            $info = Buffer::get_info($uri);
+            if (empty($info)){
                 try {
                     if ($uri === '') {
                         $file = DIR . 'project.info';
@@ -53,11 +55,12 @@ class FilesystemStore implements IStore
                     return false;
                 }
             }
-            if (empty($info)){
+            if (empty($info) && $uri){
                 // Поиск объекта в свойствах объекта
                 list($parent_uri, $name) = F::splitRight('/', $uri);
                 if ($parent = Data::read($parent_uri)) {
-                    $entity = $parent->child($name);
+                    $props = Buffer::get_props($parent_uri);
+                    $entity = $parent->child($name, isset($props[$name]));
                 } else {
                     $entity = false;
                 }
@@ -239,13 +242,131 @@ class FilesystemStore implements IStore
         return $objects;
     }
 
+    /**
+     * @param Entity $entity
+     */
     function write($entity)
     {
+        // /vendor/boolive/basic/widget/.res/title
+        // Если объект свойство, то сохранять родительский объект??
 
+        // Текущие сведения об объекте
+        $info = [];
+        if ($entity->is_exists()) {
+            // Текущие сведения об объекта
+            $uri = $entity->is_changed('uri')? $entity->changes('uri') : $entity->uri();
+            if ($uri === '') {
+                $file = DIR . 'project.info';
+            } else {
+                $file = DIR . trim($uri, '/') . '/' . File::fileName($uri) . '.info';
+            }
+            if (is_file($file)) {
+                $info = file_get_contents($file);
+                $info = json_decode($info, true);
+            }
+        }
+
+        // Подбор уникального имени
+        // @todo Перенос php файлов влечет за собой фатальные ошибки!!!! так как меняется namespace и class name
+        if ($entity->is_changed('uri') || !$entity->is_exists()){
+            // Проверка уникальности нового имени путём создания папки
+            // Если подбор уникального имени, то создавать пока не создаться (попробовать постфикс)
+            $path = dirname($entity->dir(true)).'/';
+            $name = $entity->name();
+            if ($new_path = File::makeUniqueDir($path, $name, 1, $entity->is_auto_namig())){
+                $entity->name(basename($new_path));
+                $info['name'] = $entity->name();
+            }else{
+                $entity->errors()->_attributes->name->add(new Error('Не уникальное', 'unique'));
+                throw $entity->errors();
+            }
+            // Перемещение старой папки в новую
+            if ($entity->is_exists()){
+                File::rename($entity->dir(true, true), $entity->dir(true, false));
+            }
+            // @todo Обновить URI подчиненных объектов не фиксируя изменения
+        }
+
+        // Новые сведения об объекте
+        $info_new = $this->export($entity, isset($info['properties'])? $info['properties'] : []);
+
+        // Если связаны с файлом
+        // 1. Подготовить имя файлу и перенести его в папку объекта
+        // 2. Если был ранее файл и он поменял или сменился признак is_file|is_default_file, то удалить его
+
+
+        // Порядковый номер
+        // 1. Подбор максимального среди существующих
+        // 2. Смещение порядка у последующих объектов
+
+        // Сохранить объект с свлйствами JSON
+        $uri = $entity->uri();
+        if ($uri === '') {
+            $file = DIR . 'project.info';
+        } else {
+            $file = DIR . trim($uri, '/') . '/' . File::fileName($uri) . '.info';
+        }
+        File::create(F::toJSON($info_new, true), $file);
+        // Сохранить подчиненные
+        foreach ($entity->children() as $child){
+            /** @var Entity $child */
+            if (!$child->is_property()) Data::write($child);
+        }
     }
 
     function delete($entity)
     {
 
+    }
+
+    /**
+     * @param Entity $entity
+     * @param array $properties
+     * @return array
+     */
+    protected function export($entity, $properties = [])
+    {
+        // Новые сведения об объекте
+        $result = [];
+        $result['proto'] = $entity->proto();
+        if ($entity->author()) $result['author'] = $entity->author();
+        if ($entity->order() < Entity::MAX_ORDER) $result['order'] = $entity->order();
+        if ($entity->created() > 0) $result['created'] = $entity->created();
+        if ($entity->updated() > 0) $result['updated'] = $entity->updated();
+        // value
+        if (!$entity->is_default_value()) $result['value'] = $entity->value();
+        // file
+        if (!$entity->is_default_file()){
+            if ($entity->is_file()){
+                $file_attache = $entity->file();
+                if (is_array($file_attache)){
+                    // Загрузка файла
+
+                }else{
+                    $result['file'] = basename($file_attache);
+                }
+            }else{
+                // файла нет, но нужно отменить наследование файла
+                $result['file'] = null;
+            }
+            $result['file'] = $entity->file();
+        }
+        if (!$entity->is_default_logic()) $result['logic'] = true;
+        if ($entity->is_draft()) $result['is_draft'] = true;
+        if ($entity->is_hidden()) $result['is_hidden'] = true;
+        if ($entity->is_mandatory()) $result['is_mandatory'] = true;
+//        if ($entity->is_property()) $result['is_property'] = $entity->is_property();
+        if ($entity->is_relative()) $result['is_relative'] = true;
+        if ($entity->is_link()) $result['is_link'] = true;
+
+        $result['properties'] = $properties;
+
+        /** @var Entity $child */
+        foreach ($entity->children() as $name => $child){
+            if ($child->is_property()){
+                $result['properties'][$name] = $this->export($child, isset($properties[$name])?$properties[$name]:[]);
+                    }
+                }
+                return $result;
     }
 } 

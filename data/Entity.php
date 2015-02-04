@@ -204,10 +204,14 @@ class Entity
 
     /**
      * URI объекта
+     * @param bool $current Возвращать новый или текущий uri?
      * @return string
      */
-    function uri()
+    function uri($current = false)
     {
+        if ($current && $this->is_changed('uri')){
+            return $this->changes('uri');
+        }
         return $this->_attributes['uri'];
     }
 
@@ -224,6 +228,7 @@ class Entity
             // Фильтр имени
             $new = preg_replace('/\s/ui','_',$new);
             $this->change('name', $new);
+            $this->change('uri', $this->parent().'/'.$new);
             $this->_auto_naming = $choose_unique;
         }
         return $this->_attributes['name'];
@@ -460,11 +465,12 @@ class Entity
     /**
      * Директория объекта
      * @param bool $root Признак, возвращать путь от корня сервера или от web директории (www)
+     * @param bool $current Возвращать с учётом исходного uri (true) или нового (false)
      * @return string
      */
-    function dir($root = false)
+    function dir($root = false, $current = false)
     {
-        $dir = $this->uri();
+        $dir = $this->uri($current);
         if ($root){
             return DIR.trim($dir,'/').'/';
         }else{

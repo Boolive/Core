@@ -556,7 +556,7 @@ class Values implements IteratorAggregate, ArrayAccess, Countable
      * Возвращает свойства объекта для трассировки
      * @return array
      */
-    function __debugInfo()
+    function __trace()
     {
         return $this->_value;
     }

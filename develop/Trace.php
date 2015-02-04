@@ -286,8 +286,8 @@ class Trace
      */
     static private function objToArray(&$object)
     {
-        if (is_object($object) && method_exists($object, '__debugInfo')){
-            $arr = $object->__debugInfo();
+        if (is_object($object) && method_exists($object, '__trace')){
+            $arr = $object->__trace();
             if (!is_array($arr)) return $arr;
         }else{
             $arr = (array)$object;

@@ -158,7 +158,7 @@ class Rule
         return $this->filters;
     }
 
-    function __debugInfo()
+    function __trace()
     {
         return $this->filters;
     }

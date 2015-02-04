@@ -395,7 +395,7 @@ class Error extends Exception implements IteratorAggregate
         //}
     }
 
-    function __debugInfo()
+    function __trace()
     {
         $trace = [];
         $trace['code'] = $this->getCode();

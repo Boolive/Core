@@ -270,12 +270,14 @@ class Request implements IActivate, \ArrayAccess, \Countable
     /**
      * Подмешать к входящим данным
      * @param array $mix
+     * @return $this
      */
     function mix($mix)
     {
         if (!empty($mix) && is_array($mix)) {
             $this->input = array_replace_recursive($this->input, $mix);
         }
+        return $this;
     }
 
     /**
@@ -357,7 +359,7 @@ class Request implements IActivate, \ArrayAccess, \Countable
      * @param mixed $offset The offset to retrieve.
      * @return mixed
      */
-    public function offsetGet($offset)
+    public function &offsetGet($offset)
     {
         return $this->filtered[$offset];
     }
@@ -390,7 +392,16 @@ class Request implements IActivate, \ArrayAccess, \Countable
         return count($this->filtered);
     }
 
-    public function __debugInfo()
+    /**
+     * Все данных в исходном значении (не отфильтрованнные)
+     * @return array
+     */
+    public function getInput()
+    {
+        return $this->input;
+    }
+
+    public function __trace()
     {
         return [
             'filtered' => $this->filtered,

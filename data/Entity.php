@@ -32,7 +32,7 @@ class Entity
         'created'      => 0,
         'updated'      => 0,
         'value'	 	   => '',
-        'file'         => '',
+        'file'         => null,
         //'is_file'      => false,
         'is_draft'	   => false,
         'is_hidden'	   => false,
@@ -160,7 +160,7 @@ class Entity
             'is_default_logic' => Rule::bool(), // Признак, используется класс прототипа или свой?
             // Имя файла или сведения о загружаемом файле
             'file'	=> Rule::any([
-                Rule::forbidden(),
+                Rule::null(),
                 Rule::string()->regexp('/[^\\/\\\\]+/ui'), // имя файла
                 Rule::arrays([
                     'tmp_name'	=> Rule::string(), // Путь на связываемый файл
@@ -168,7 +168,7 @@ class Entity
                     'size'		=> Rule::int(), // Размер в байтах
                     'error'		=> Rule::int()->eq(0, true), // Код ошибки. Если 0, то ошибки нет
                     'type'      => Rule::string(), // MIME тип файла
-                    'content'   => Rule::string()
+                    //'content'   => Rule::string()
                 ])
             ]),
 //            // Сведения о классе объекта (загружаемый файл или программный код). Не является атрибутом объекта
@@ -733,6 +733,19 @@ class Entity
         return $this->_changes;
     }
 
+    /**
+     * Каскадное обновление URI подчиненных на основании своего uri
+     * Обновляются uri только выгруженных/присоединенных на данный момент подчиенных
+     */
+    function updateChildrenUri()
+    {
+        foreach ($this->_children as $child_name => $child){
+            /* @var Entity $child */
+            $child->_attributes['uri'] = $this->_attributes['uri'].'/'.$child_name;
+            $child->updateChildrenUri();
+        }
+    }
+
     ############################################
     #                                          #
     #             Properties                   #
@@ -1000,7 +1013,7 @@ class Entity
                 return $this->is_my();
             case 'access':
                 return $this->is_accessible($cond[1]);
-            // Остальные параметры считать атрибутами - условия на затрибт
+            // Остальные параметры считать условиями на атрибут
             default:
                 if ($cond[0] == 'attr') array_shift($cond);
                 if (sizeof($cond) < 2){
@@ -1182,6 +1195,41 @@ class Entity
     function depth()
     {
         return mb_substr_count($this->_attributes['uri'], '/');
+    }
+
+    /**
+     * Дополнить объект свойствами прототипа
+     * Используется для создания полного объекта или его обновления
+     * @param bool $only_mandatory Дополнять только обязательными или всеми свойствами?
+     * @param bool $only_property Дополнять только свойствами или всеми объектами?
+     */
+    function complete($only_mandatory = true, $only_property = true)
+    {
+        // Выбор подчиненных объектов
+        $proto = $this->proto(null, true);
+        $cond = [
+            'from' => $proto,
+            'select' => 'properties',
+            'key' => 'name'
+        ];
+        if ($only_mandatory){
+            $cond['where'] = [['is_mandatory','=',true]];
+        }
+        $props_children = Data::find($cond);
+        if (!$only_property){
+            // Выбор подчиненных объектов
+            $cond['select'] = 'children';
+            $props_children = array_merge($props_children, Data::find($cond));
+        }
+        // Протототипирование отсутсвующих подчиенных
+        foreach ($props_children as $name => $child){
+            if (!$this->{$name}->is_exists()){
+                $this->{$name} = Data::create($child, $this);
+                $this->{$name}->is_property($child->is_property());
+                $this->{$name}->is_mandatory($child->is_mandatory());
+                $this->{$name}->complete($only_mandatory, $only_property);
+            }
+        }
     }
 
     function toArray()

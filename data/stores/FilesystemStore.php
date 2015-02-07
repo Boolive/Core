@@ -236,20 +236,33 @@ class FilesystemStore implements IStore
                 }
             }
             return $result;
+        }else
+        if ($cond['struct'] == 'array' && $cond['key']){
+            $result = [];
+            /** @var Entity $item */
+            foreach ($objects as $item){
+                $result[$item->attr($cond['key'])] = $item;
+            }
+            return $result;
         }
-
-
         return $objects;
     }
 
     /**
+     * Сохранение сущности
      * @param Entity $entity
+     * @throws Error
      */
     function write($entity)
     {
-        // /vendor/boolive/basic/widget/.res/title
         // Если объект свойство, то сохранять родительский объект??
-
+        if ($entity->is_property()){
+            if ($parent = $entity->parent(null, true)) {
+                $parent->__set($entity->name(), $entity);
+                Data::write($parent);
+            }
+            return;
+        }
         // Текущие сведения об объекте
         $info = [];
         if ($entity->is_exists()) {
@@ -265,7 +278,6 @@ class FilesystemStore implements IStore
                 $info = json_decode($info, true);
             }
         }
-
         // Подбор уникального имени
         // @todo Перенос php файлов влечет за собой фатальные ошибки!!!! так как меняется namespace и class name
         if ($entity->is_changed('uri') || !$entity->is_exists()){
@@ -284,16 +296,38 @@ class FilesystemStore implements IStore
             if ($entity->is_exists()){
                 File::rename($entity->dir(true, true), $entity->dir(true, false));
             }
-            // @todo Обновить URI подчиненных объектов не фиксируя изменения
+            if ($entity->is_changed('name') && $entity->is_exists()){
+                // @todo Переименовать .info, .php и, возможно, привязанный файл.
+            }
+            // Обновить URI подчиненных объектов не фиксируя изменения
+            $entity->updateChildrenUri();
         }
 
         // Новые сведения об объекте
-        $info_new = $this->export($entity, isset($info['properties'])? $info['properties'] : []);
-
-        // Если связаны с файлом
-        // 1. Подготовить имя файлу и перенести его в папку объекта
-        // 2. Если был ранее файл и он поменял или сменился признак is_file|is_default_file, то удалить его
-
+        $info_new = $this->export($entity, isset($info['properties'])? $info['properties'] : [], function(Entity $entity, $file){
+            // Обработка файла у объекта и его свойств
+            $f = File::fileInfo($file['tmp_name']);
+            $name = ($f['back']?'../':'').$entity->name();
+            // расширение
+            if (empty($file['name'])){
+                if ($f['ext']) $name.='.'.$f['ext'];
+            }else{
+                $f = File::fileInfo($file['name']);
+                if ($f['ext']) $name.='.'.$f['ext'];
+            }
+            //
+            $path = $entity->dir(true).$name;
+            if ($file['tmp_name'] != $path){
+                if (!File::upload($file['tmp_name'], $path)){
+                    // @todo Проверить безопасность?
+                    // Копирование, если объект-файл создаётся из уже имеющихся на сервере файлов, например при импорте каталога
+                    if (!File::copy($file['tmp_name'], $path)){
+                        $name = null;
+                    }
+                }
+            }
+            return $name;
+        });
 
         // Порядковый номер
         // 1. Подбор максимального среди существующих
@@ -322,9 +356,10 @@ class FilesystemStore implements IStore
     /**
      * @param Entity $entity
      * @param array $properties
+     * @param \Closure $file_save_callback Функция для обработки подключенных к объекту файлов
      * @return array
      */
-    protected function export($entity, $properties = [])
+    protected function export($entity, $properties = [], $file_save_callback = null)
     {
         // Новые сведения об объекте
         $result = [];
@@ -341,7 +376,11 @@ class FilesystemStore implements IStore
                 $file_attache = $entity->file();
                 if (is_array($file_attache)){
                     // Загрузка файла
-
+                    if ($file_save_callback instanceof \Closure){
+                        if (!($result['file'] = $file_save_callback($entity, $file_attache))){
+                            unset($result['file']);
+                        }
+                    }
                 }else{
                     $result['file'] = basename($file_attache);
                 }
@@ -349,7 +388,6 @@ class FilesystemStore implements IStore
                 // файла нет, но нужно отменить наследование файла
                 $result['file'] = null;
             }
-            $result['file'] = $entity->file();
         }
         if (!$entity->is_default_logic()) $result['logic'] = true;
         if ($entity->is_draft()) $result['is_draft'] = true;
@@ -359,14 +397,19 @@ class FilesystemStore implements IStore
         if ($entity->is_relative()) $result['is_relative'] = true;
         if ($entity->is_link()) $result['is_link'] = true;
 
-        $result['properties'] = $properties;
+        if (is_array($properties)) {
+            $result['properties'] = $properties;
+        }
 
         /** @var Entity $child */
         foreach ($entity->children() as $name => $child){
             if ($child->is_property()){
-                $result['properties'][$name] = $this->export($child, isset($properties[$name])?$properties[$name]:[]);
-                    }
-                }
-                return $result;
+                $result['properties'][$name] = $this->export($child, isset($properties[$name]['properties'])?$properties[$name]['properties']:[], $file_save_callback);
+            }
+        }
+        if (empty($result['properties'])){
+            unset($result['properties']);
+        }
+        return $result;
     }
-} 
+}

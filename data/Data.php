@@ -84,7 +84,7 @@ class Data implements IActivate
             if ($store = self::getStore($entity->uri())) {
                 return $store->write($entity);
             }else{
-                throw new Error('Неопредлено хранилище объекта','store');
+                throw new Error('Неопределено хранилище объекта','store');
             }
         }else{
             throw $entity->errors();

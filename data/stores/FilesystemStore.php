@@ -122,8 +122,8 @@ class FilesystemStore implements IStore
                             while ($curr['dh']->valid()) {
                                 /** @var \DirectoryIterator $file */
                                 $file = $curr['dh']->current();
-                                $curr['dh']->next();
-                                if (($name = $file->getFilename()) !== '') {
+                                $cur_dh = $curr['dh'];
+//                              if (($name = $file->getFilename()) !== ''){
                                     if (!isset($ignore[$name])) {
                                         $uri = ($curr['name'] === '') ? $curr['parent'] : $curr['parent'] . '/' . $curr['name'];
                                         if ($name == $curr['name'] . '.info') {
@@ -159,14 +159,15 @@ class FilesystemStore implements IStore
                                                 }
                                             }
                                         } else
-                                            if ($curr['depth'] && $file->isDir()) {
-                                                if ($dh = new \DirectoryIterator($file->getPathname())) {
-                                                    $stack[] = ['name' => $name, 'dh' => $dh, 'depth' => $curr['depth'] - 1, 'parent' => $uri];
-                                                    $curr = end($stack);
-                                                }
+                                        if ($curr['depth'] && $file->isDir()){
+                                            if ($dh = new \DirectoryIterator($file->getPathname())) {
+                                                $stack[] = ['name' => $name, 'dh' => $dh, 'depth' => $curr['depth'] - 1, 'parent' => $uri];
+                                                $curr = end($stack);
                                             }
+                                        }
                                     }
                                 }
+                                $cur_dh->next();
                             }
                             array_pop($stack);
                         } while ($stack);

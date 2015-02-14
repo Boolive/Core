@@ -1,7 +1,7 @@
 <?php
 /**
- * Класс
- *
+ * Модуль данных
+ * Мост к хранилищам и поисковикам
  * @version 1.0
  */
 namespace boolive\core\data;
@@ -484,6 +484,12 @@ class Data implements IActivate
                 if (isset($info['value']) && !isset($info['is_default_value'])){
                     $info['is_default_value'] = false;
                 }
+
+                if (!isset($info['is_mandatory']) && isset($info['proto'])){
+                    $proto = self::read($info['proto']);
+                    $info['is_mandatory'] = $proto->is_mandatory();
+                }
+
                 $entity = new $class($info);
             }catch (\ErrorException $e){
                 $entity = new Entity($info);

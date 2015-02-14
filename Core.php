@@ -49,7 +49,7 @@ namespace boolive\core {
             mb_internal_encoding('UTF-8');
             mb_regex_encoding('UTF-8');
             mb_http_output('UTF-8');
-            // При необходимости, каждый класс может автоматически подключиться и активироваться, обработав событие START.
+            // При необходимости, каждый класс может автоматически подключиться и активироваться, обработав событие Core::activate.
             \boolive\core\events\Events::trigger('Core::activate');
         }
 

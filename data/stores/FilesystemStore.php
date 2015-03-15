@@ -123,7 +123,7 @@ class FilesystemStore implements IStore
                                 /** @var \DirectoryIterator $file */
                                 $file = $curr['dh']->current();
                                 $cur_dh = $curr['dh'];
-//                              if (($name = $file->getFilename()) !== ''){
+                                if (($name = $file->getFilename()) !== ''){
                                     if (!isset($ignore[$name])) {
                                         $uri = ($curr['name'] === '') ? $curr['parent'] : $curr['parent'] . '/' . $curr['name'];
                                         if ($name == $curr['name'] . '.info') {

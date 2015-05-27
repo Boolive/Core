@@ -197,7 +197,7 @@ class FilesystemStore implements IStore
                     if ($a == $b) {
                         $comp = 0;
                     } else {
-                        $comp = ($a > $b || $a == null) ? 1 : -1;
+                        $comp = ($a > $b || $a === null) ? 1 : -1;
                         if ($order[$i][1] == 'desc') $comp = -$comp;
                     }
                     $i++;

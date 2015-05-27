@@ -130,7 +130,7 @@ class Request implements IActivate, \ArrayAccess, \Countable
             self::$source['SERVER']['argv'] = $_SERVER['argv'];
             self::$source['SERVER']['argc'] = $_SERVER['argc'];
         }
-        self::$source['ARG'] = array_flip(self::$source['SERVER']['argv']);
+        self::$source['ARG'] = self::$source['SERVER']['argv'];
         // Метод запроса
         if (isset(self::$source['SERVER']['REQUEST_METHOD']) && !isset(self::$source['REQUEST']['method'])){
             self::$source['REQUEST']['method'] = self::$source['SERVER']['REQUEST_METHOD'];

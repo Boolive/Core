@@ -111,7 +111,7 @@ class File implements IActivate
             if (!is_dir($dir)) mkdir($dir, true);
             if (mb_strtoupper($from) != mb_strtoupper($to)){
                 if (is_dir($to)){
-                    self::clearDir($to, true);
+                    self::clear_dir($to, true);
                 }else
                 if (is_file($to)){
                     unlink($to);
@@ -145,7 +145,7 @@ class File implements IActivate
      * @param $dir
      * @return bool
      */
-    static function deleteEmtyDir($dir)
+    static function delete_empty_dir($dir)
     {
         $dir = self::makeVirtualDir($dir, false);
         if (is_dir($dir) && sizeof(scandir($dir)) == 2){
@@ -161,7 +161,7 @@ class File implements IActivate
      * @param bool $delete_me Удалить указанную директорию (true) или только её содержимое (false)?
      * @return bool Признак, выполнено ли удаление
      */
-    static function clearDir($dir, $delete_me = false)
+    static function clear_dir($dir, $delete_me = false)
     {
         $dir = self::makeVirtualDir($dir, false);
         $result = false;
@@ -171,7 +171,7 @@ class File implements IActivate
         if (is_dir($dir)){
             $scan = glob(rtrim($dir, '/').'/*');
             foreach ($scan as $path){
-                self::clearDir($path, true);
+                self::clear_dir($path, true);
             }
             $result = $delete_me?@rmdir($dir):true;
         }
@@ -245,8 +245,8 @@ class File implements IActivate
      */
     static function fileName($path)
     {
-        $list = explode('/', $path);
-        return array_pop($list);
+//        $list = explode('/', $path);
+        return array_pop($list = explode('/', $path));
     }
 
     /**
@@ -388,17 +388,6 @@ class File implements IActivate
             $dir = substr($id,-$size*$i, $size).'/'.$dir;
         }
         return (substr($id,0, -$size*($i-1))).'/'.$dir;
-    }
-
-    /**
-     * Раскрывает переход типа '/../
-     * @warning Не понимает вложенные переходы типа /../../
-     * @param string $path
-     * @return string
-     */
-    static function realPath($path)
-    {
-        return preg_replace('/[^\/]+\/\.\.\//', '', $path);
     }
 
     /**

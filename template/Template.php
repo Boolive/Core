@@ -45,7 +45,6 @@ class Template implements IActivate
     /**
      * Создание текста из шаблона
      * В шаблон вставляются переданные значения
-     * При обработки шаблона могут довыбираться значения из $entity и создаваться команды в $request
      * @param string $template
      * @param array $v
      * @throws Error

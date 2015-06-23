@@ -89,7 +89,7 @@ class Session implements IActivate
      * @param string $key Ключ значения
      * @return bool
      */
-    static function isExist($key)
+    static function is_exist($key)
     {
         return isset($_SESSION[$key]) || array_key_exists($key, $_SESSION);
     }
@@ -99,7 +99,7 @@ class Session implements IActivate
      * @param string $key Ключ значения
      * @return bool
      */
-    static function isEmpty($key)
+    static function is_empty($key)
     {
         return empty($_SESSION[$key]);
     }

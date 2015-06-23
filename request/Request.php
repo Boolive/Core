@@ -7,6 +7,7 @@
 namespace boolive\core\request;
 
 use boolive\core\errors\Error;
+use boolive\core\functions\F;
 use boolive\core\IActivate;
 use boolive\core\values\Check;
 use boolive\core\values\Rule;

@@ -99,7 +99,7 @@ class FilesystemStore implements IStore
             if ($cond['depth'] > 0){
                 if ($cond['select'] == 'properties'){
                     // Читаем, чтобы инфо о свойства попало в буфер
-                    $from = $this->read($cond['from']);
+                    $from = $this->read($cond['from']);// need for Buffer::get_props
                     if ($prop_names = Buffer::get_props($cond['from'])){
                         foreach ($prop_names as $prop_uri){
                             // Проверка объекта на соответствие услвоию [where]

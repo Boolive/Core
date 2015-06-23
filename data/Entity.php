@@ -202,6 +202,11 @@ class Entity
         return $this->_attributes[$name];
     }
 
+    function is_attr($name)
+    {
+        return isset($this->_attributes[$name]) || array_key_exists($name, $this->_attributes);
+    }
+
     /**
      * URI объекта
      * @param bool $current Возвращать новый или текущий uri?

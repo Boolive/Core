@@ -82,7 +82,7 @@ class Trace
     function log()
     {
         //error_log(self::Format($this, $trace_buf = [], '  ', false));
-        File::create(date('Y.m.d G:i.s').' '.self::Format($this, $trace_buf = [], '  ', false)."\r\n", DIR_TEMP.'trace.log', true);
+        File::create(date('Y.m.d G:i.s').' '.self::Format($this, true, $trace_buf = [], '  ', false)."\r\n", DIR_TEMP.'trace.log');
         return $this;
     }
 
@@ -93,7 +93,7 @@ class Trace
     function out()
     {
         if (php_sapi_name() == 'cli'){
-            echo self::Format($this, $trace_buf = [], '  ', false)."\n";
+            echo self::Format($this, false, $trace_buf = [], '  ')."\n";
         }else{
             echo '<pre>'.self::Format($this).'</pre>';
         }
@@ -190,7 +190,7 @@ class Trace
      * @param bool $html Форматировать в html?
      * @return string
      */
-    static function format($var, &$trace_buf = [], $pfx = '', $html = true)
+    static function format($var, $html = true, &$trace_buf = [], $pfx = '')
     {
         $sp  = $html?'<span style="color:#ddd">|</span>   ':'|   ';
         $back = strlen($sp);
@@ -201,15 +201,15 @@ class Trace
                 if (empty($pfx)) $pfx = str_repeat(' ',strlen(strip_tags($sp)));
             }
             if (empty($var->children)){
-                $out.= $pfx.self::format($var->value, $trace_buf, $pfx.$sp, $html);
+                $out.= $pfx.self::format($var->value, $html, $trace_buf, $pfx.$sp);
             }else{
                 if (isset($var->value)){
-                    $out.= $pfx.self::format($var->value, $trace_buf, $pfx.$sp, $html)."\n";
+                    $out.= $pfx.self::format($var->value, $html, $trace_buf, $pfx.$sp)."\n";
                 }
                 $cnt = sizeof($var->children);
                 foreach ($var->children as $var){
                     $cnt--;
-                    $out.= $pfx.self::format($var, $trace_buf, $pfx.$sp, $html)."\n";
+                    $out.= $pfx.self::format($var, $html, $trace_buf, $pfx.$sp)."\n";
                 }
                 return $out;
             }
@@ -236,7 +236,7 @@ class Trace
                 foreach ($var as $name => $value){
                     $cnt--;
                     $new_pfx = $pfx.$sp;
-                    $out.= "\n".$pfx.self::style($name, $html).' => '.self::format($value, $trace_buf, $new_pfx, $html).',';
+                    $out.= "\n".$pfx.self::style($name, $html).' => '.self::format($value, $html, $trace_buf, $new_pfx).',';
                 }
                 $out = rtrim($out,',');
                 $out.= "\n".substr($pfx,0,strlen($pfx)-$back).']';
@@ -258,14 +258,14 @@ class Trace
             if (isset($list)){
                 $out.= "\n".substr($pfx,0,strlen($pfx)-$back).'{';
                 if (!is_array($list)){
-                    $out.= "\n".$pfx.self::format($list, $trace_buf, $pfx, $html);
+                    $out.= "\n".$pfx.self::format($list, $html, $trace_buf, $pfx);
                 }else{
                     $cnt = sizeof($list);
                     if ($cnt > 0){
                         foreach ($list as $name => $value){
                             $cnt--;
                             $new_pfx = $pfx.$sp;
-                            $out.= "\n".$pfx.$name.' = '.self::format($value, $trace_buf, $new_pfx, $html).';';
+                            $out.= "\n".$pfx.$name.' = '.self::format($value, $html, $trace_buf, $new_pfx).';';
                         }
                     }
                 }

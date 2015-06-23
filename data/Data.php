@@ -29,8 +29,27 @@ class Data implements IActivate
      * @param $uri
      * @return bool|Entity
      */
-    static function read($uri, $access = false)
+    static function read($uri, $access = false, $relative_path = false)
     {
+        if ($relative_path && preg_match('/(\.\.)/ui', $uri)){
+            $names = explode('/', trim($uri,'/'));
+            $i = 0;
+            $new_names = [];
+            foreach ($names as $name){
+                if ($name == '..'){
+                    if ($i>0){
+                        $i--;
+                        unset($new_names[$i]);
+                    }
+                }else{
+                    $new_names[$i] = $name;
+                    $i++;
+                }
+            }
+
+            $uri = count($new_names)?'/'.implode('/',$new_names):'';
+        }
+
         if ($store = self::getStore($uri)) {
             $obj = $store->read($uri);
             if ($obj && $obj->is_exists() && $access){
@@ -106,6 +125,11 @@ class Data implements IActivate
     static function create($proto, $parent = null, $attr = [])
     {
         if (!$proto instanceof Entity) $proto = Data::read($proto);
+        if (!$proto) throw new Error('Prototype does not exists');
+        if (isset($parent)) {
+            if (!$parent instanceof Entity) $parent = Data::read($parent);
+            if (!$parent) throw new Error('Parent does not exists');
+        }
         $class = get_class($proto);
         $attr = array_replace([
             'name' => $proto->name(),
@@ -119,10 +143,8 @@ class Data implements IActivate
         // Уникальность имени
         $obj->name(null, true);
         // Установка родителя
-        if (isset($parent)){
-            if (!$parent instanceof Entity) $parent = Data::read($parent);
-            $obj->parent($parent);
-        }
+        if (isset($parent)) $obj->parent($parent);
+
         // Установка прототипа
         $obj->proto($proto);
         return $obj;
@@ -484,11 +506,16 @@ class Data implements IActivate
                 if (isset($info['value']) && !isset($info['is_default_value'])){
                     $info['is_default_value'] = false;
                 }
+                if (!isset($info['is_default_value']))  $info['is_default_value'] = true;
 
-                if (!isset($info['is_mandatory']) && isset($info['proto'])){
-                    $proto = self::read($info['proto']);
-                    $info['is_mandatory'] = $proto->is_mandatory();
+                if (!isset($info['value']) && !empty($info['is_default_value']) && !empty($info['proto'])){
+                    $info['value'] = Data::read($info['proto'])->value();
                 }
+
+//                if (!isset($info['is_mandatory']) && isset($info['proto'])){
+//                    $proto = self::read($info['proto']);
+//                    $info['is_mandatory'] = $proto->is_mandatory();
+//                }
 
                 $entity = new $class($info);
             }catch (\ErrorException $e){

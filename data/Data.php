@@ -128,7 +128,7 @@ class Data implements IActivate
         if (!$proto) throw new Error('Prototype does not exists');
         if (isset($parent)) {
             if (!$parent instanceof Entity) $parent = Data::read($parent);
-            if (!$parent) throw new Error('Parent does not exists');
+//            if (!$parent) throw new Error('Parent does not exists');
         }
         $class = get_class($proto);
         $attr = array_replace([

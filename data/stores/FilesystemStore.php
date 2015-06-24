@@ -206,6 +206,9 @@ class FilesystemStore implements IStore
             });
         }
         // limit (not for value and object)
+        if ($cond['limit']){
+            $objects = array_slice($objects, $cond['limit'][0], $cond['limit'][1]);
+        }
 
         // calc
 

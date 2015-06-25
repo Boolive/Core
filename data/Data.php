@@ -178,6 +178,7 @@ class Data implements IActivate
         }
         // Декодирование строкового услвоия в массив
         if (isset($str_cond)){
+            $str_cond = trim($str_cond);
             if (!preg_match('/^[^=]+\(/ui', $str_cond)){
                 $result = self::condStringToArray(self::condUrlToStrnig($str_cond), true);
             }else{
@@ -299,7 +300,7 @@ class Data implements IActivate
                 'limit' => $result['limit'],
                 'key' => $result['key'],
                 'access' => $result['access'],
-                'correct' => true
+                'correct' => $full_normalize
             ];
         }
         return $result;
@@ -315,7 +316,6 @@ class Data implements IActivate
      */
     static function condUrlToStrnig($uri)
     {
-        $uri = trim($uri);
         if (mb_substr($uri,0,4)!='from'){
             if (preg_match('/^[a-z]+=/ui', $uri)){
                 $uri = 'from=&'.$uri;

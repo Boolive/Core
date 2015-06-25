@@ -106,6 +106,7 @@ class FilesystemStore implements IStore
                             if ($obj = $this->read($prop_uri)) {
                                 if (!$cond['where'] || $obj->verify($cond['where'])) {
                                     $objects[] = $obj;
+                                    if ($cond['calc'] == 'exists') break;
                                 }
                             }
                         }
@@ -156,6 +157,7 @@ class FilesystemStore implements IStore
                                             if ($obj && !$obj->is_property()) {
                                                 if (!$cond['where'] || $obj->verify($cond['where'])) {
                                                     $objects[] = $obj;
+                                                    if ($cond['calc'] == 'exists') break;
                                                 }
                                             }
                                         } else
@@ -178,6 +180,37 @@ class FilesystemStore implements IStore
         }
 
         // access
+
+        // calc
+        if ($cond['calc']){
+            $calc = null;
+            if ($cond['calc'] == 'exists'){
+                $calc = !empty($objects);
+            }else
+            if ($cond['calc'] == 'count'){
+                $calc = count($objects);
+            }else
+            if (is_array($cond['calc']) && count($cond['calc'])==2){
+                $attr = $cond['calc'][1];
+                foreach ($objects as $o){
+                    switch ($cond['calc'][0]){
+                        case 'min':
+                            $calc = $calc===null? $o->attr($attr) : min($o->attr($attr), $calc);
+                            break;
+                        case 'max':
+                            $calc = $calc===null? $o->attr($attr) : max($o->attr($attr), $calc);
+                            break;
+                        case 'sum':
+                        case 'avg':
+                        default:
+                            $calc+= $o->attr($attr);
+                            break;
+                    }
+                }
+                if  ($objects && $cond['calc'][0] == 'avg') $calc = $calc / count($objects);
+            }
+            return $calc;
+        }
 
         // order (not for value and object)
         if ($order = $cond['order']) {

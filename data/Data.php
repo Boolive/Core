@@ -99,7 +99,7 @@ class Data implements IActivate
      */
     static function write($entity)
     {
-        if ($entity->check()) {
+        if ($entity->check()){
             if ($store = self::getStore($entity->uri())) {
                 return $store->write($entity);
             }else{

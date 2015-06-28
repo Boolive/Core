@@ -368,9 +368,9 @@ class Check
         if (!empty($cond) && !$value->verify($cond)){
             $error = new Error('Объект не соответсвует заданному условию', 'entity');
         }else
-        if (!$value->is_exists()){
-            $error = new Error('Объект не существует', 'entity');
-        }else
+//        if (!$value->is_exists()){
+//            $error = new Error('Объект не существует', 'entity');
+//        }else
         if (!$value->is_accessible()){
             $error = new Error('Объект недоступен для чтения', 'entity');
         }else{

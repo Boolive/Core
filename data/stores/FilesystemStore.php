@@ -212,7 +212,7 @@ class FilesystemStore implements IStore
             return $calc;
         }
 
-        // order (not for value and object)
+        // order
         if ($order = $cond['order']) {
             $order_cnt = count($order);
             usort($objects, function ($a, $b) use ($order, $order_cnt) {
@@ -238,12 +238,11 @@ class FilesystemStore implements IStore
                 return $comp;
             });
         }
+
         // limit (not for value and object)
         if ($cond['limit']){
             $objects = array_slice($objects, $cond['limit'][0], $cond['limit'][1]);
         }
-
-        // calc
 
         // struct, key
         if ($cond['struct'] == 'tree'){
@@ -298,86 +297,86 @@ class FilesystemStore implements IStore
                 $parent->__set($entity->name(), $entity);
                 Data::write($parent);
             }
-            return;
-        }
-        // Текущие сведения об объекте
-        $info = [];
-        if ($entity->is_exists()) {
-            // Текущие сведения об объекта
-            $uri = $entity->is_changed('uri')? $entity->changes('uri') : $entity->uri();
+        }else {
+            // Текущие сведения об объекте
+            $info = [];
+            if ($entity->is_exists()) {
+                // Текущие сведения об объекта
+                $uri = $entity->is_changed('uri') ? $entity->changes('uri') : $entity->uri();
+                if ($uri === '') {
+                    $file = DIR . 'project.info';
+                } else {
+                    $file = DIR . trim($uri, '/') . '/' . File::fileName($uri) . '.info';
+                }
+                if (is_file($file)) {
+                    $info = file_get_contents($file);
+                    $info = json_decode($info, true);
+                }
+            }
+            // Подбор уникального имени
+            // @todo Перенос php файлов влечет за собой фатальные ошибки!!!! так как меняется namespace и class name
+            if ($entity->is_changed('uri') || !$entity->is_exists()) {
+                // Проверка уникальности нового имени путём создания папки
+                // Если подбор уникального имени, то создавать пока не создаться (попробовать постфикс)
+                $path = dirname($entity->dir(true)) . '/';
+                $name = $entity->name();
+                if ($new_path = File::makeUniqueDir($path, $name, 1, $entity->is_auto_namig())) {
+                    $entity->name(basename($new_path));
+                    $info['name'] = $entity->name();
+                } else {
+                    $entity->errors()->_attributes->name->add(new Error('Не уникальное', 'unique'));
+                    throw $entity->errors();
+                }
+                // Перемещение старой папки в новую
+                if ($entity->is_exists()) {
+                    File::rename($entity->dir(true, true), $entity->dir(true, false));
+                }
+                if ($entity->is_changed('name') && $entity->is_exists()) {
+                    // @todo Переименовать .info, .php и, возможно, привязанный файл.
+                }
+                // Обновить URI подчиненных объектов не фиксируя изменения
+                $entity->updateChildrenUri();
+            }
+
+            // Новые сведения об объекте
+            $info_new = $this->export($entity, isset($info['properties']) ? $info['properties'] : [], function (Entity $entity, $file) {
+                // Обработка файла у объекта и его свойств
+                $f = File::fileInfo($file['tmp_name']);
+                $name = ($f['back'] ? '../' : '') . $entity->name();
+                // расширение
+                if (empty($file['name'])) {
+                    if ($f['ext']) $name .= '.' . $f['ext'];
+                } else {
+                    $f = File::fileInfo($file['name']);
+                    if ($f['ext']) $name .= '.' . $f['ext'];
+                }
+                //
+                $path = $entity->dir(true) . $name;
+                if ($file['tmp_name'] != $path) {
+                    if (!File::upload($file['tmp_name'], $path)) {
+                        // @todo Проверить безопасность?
+                        // Копирование, если объект-файл создаётся из уже имеющихся на сервере файлов, например при импорте каталога
+                        if (!File::copy($file['tmp_name'], $path)) {
+                            $name = null;
+                        }
+                    }
+                }
+                return $name;
+            });
+
+            // Порядковый номер
+            // 1. Подбор максимального среди существующих
+            // 2. Смещение порядка у последующих объектов
+
+            // Сохранить объект с свлйствами JSON
+            $uri = $entity->uri();
             if ($uri === '') {
                 $file = DIR . 'project.info';
             } else {
                 $file = DIR . trim($uri, '/') . '/' . File::fileName($uri) . '.info';
             }
-            if (is_file($file)) {
-                $info = file_get_contents($file);
-                $info = json_decode($info, true);
-            }
+            File::create(F::toJSON($info_new, true), $file);
         }
-        // Подбор уникального имени
-        // @todo Перенос php файлов влечет за собой фатальные ошибки!!!! так как меняется namespace и class name
-        if ($entity->is_changed('uri') || !$entity->is_exists()){
-            // Проверка уникальности нового имени путём создания папки
-            // Если подбор уникального имени, то создавать пока не создаться (попробовать постфикс)
-            $path = dirname($entity->dir(true)).'/';
-            $name = $entity->name();
-            if ($new_path = File::makeUniqueDir($path, $name, 1, $entity->is_auto_namig())){
-                $entity->name(basename($new_path));
-                $info['name'] = $entity->name();
-            }else{
-                $entity->errors()->_attributes->name->add(new Error('Не уникальное', 'unique'));
-                throw $entity->errors();
-            }
-            // Перемещение старой папки в новую
-            if ($entity->is_exists()){
-                File::rename($entity->dir(true, true), $entity->dir(true, false));
-            }
-            if ($entity->is_changed('name') && $entity->is_exists()){
-                // @todo Переименовать .info, .php и, возможно, привязанный файл.
-            }
-            // Обновить URI подчиненных объектов не фиксируя изменения
-            $entity->updateChildrenUri();
-        }
-
-        // Новые сведения об объекте
-        $info_new = $this->export($entity, isset($info['properties'])? $info['properties'] : [], function(Entity $entity, $file){
-            // Обработка файла у объекта и его свойств
-            $f = File::fileInfo($file['tmp_name']);
-            $name = ($f['back']?'../':'').$entity->name();
-            // расширение
-            if (empty($file['name'])){
-                if ($f['ext']) $name.='.'.$f['ext'];
-            }else{
-                $f = File::fileInfo($file['name']);
-                if ($f['ext']) $name.='.'.$f['ext'];
-            }
-            //
-            $path = $entity->dir(true).$name;
-            if ($file['tmp_name'] != $path){
-                if (!File::upload($file['tmp_name'], $path)){
-                    // @todo Проверить безопасность?
-                    // Копирование, если объект-файл создаётся из уже имеющихся на сервере файлов, например при импорте каталога
-                    if (!File::copy($file['tmp_name'], $path)){
-                        $name = null;
-                    }
-                }
-            }
-            return $name;
-        });
-
-        // Порядковый номер
-        // 1. Подбор максимального среди существующих
-        // 2. Смещение порядка у последующих объектов
-
-        // Сохранить объект с свлйствами JSON
-        $uri = $entity->uri();
-        if ($uri === '') {
-            $file = DIR . 'project.info';
-        } else {
-            $file = DIR . trim($uri, '/') . '/' . File::fileName($uri) . '.info';
-        }
-        File::create(F::toJSON($info_new, true), $file);
         // Сохранить подчиненные
         foreach ($entity->children() as $child){
             /** @var Entity $child */

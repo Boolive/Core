@@ -108,4 +108,14 @@ class Buffer
     {
         if (isset(self::$list_info[$uri])) unset(self::$list_info[$uri]);
     }
+
+    /**
+     * Очистка буфера
+     */
+    static function clear()
+    {
+        self::$list_entity = [];
+        self::$list_info = [];
+        self::$list_props = [];
+    }
 }

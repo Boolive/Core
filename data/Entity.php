@@ -764,10 +764,12 @@ class Entity
     public function __get($name)
     {
         if (!isset($this->_children[$name])){
-            $this->_children[$name] = Data::read($this->uri().'/'.$name);
+            $this->_children[$name] = $this->is_exists()? Data::read($this->uri().'/'.$name) : null;
             if (!$this->_children[$name]){
                 if (($proto = $this->proto(null, true)) && ($child = $proto->{$name})){
                     $this->_children[$name] = Data::create($child, $this, ['name'=>$name]);
+                    $this->_children[$name]->is_property($child->is_property());
+                    $this->_children[$name]->is_mandatory($child->is_mandatory());
                 }else{
                     $this->_children[$name] = new Entity([
                         'uri' => $this->uri().'/'.$name,
@@ -1226,14 +1228,9 @@ class Entity
             $cond['select'] = 'children';
             $props_children = array_merge($props_children, Data::find($cond));
         }
-        // Протототипирование отсутсвующих подчиенных
+        // Прототипирование отсутствующих подчиненных
         foreach ($props_children as $name => $child){
-            if (!$this->{$name}->is_exists()){
-                $this->{$name} = Data::create($child, $this);
-                $this->{$name}->is_property($child->is_property());
-                $this->{$name}->is_mandatory($child->is_mandatory());
-                $this->{$name}->complete($only_mandatory, $only_property);
-            }
+            $this->{$name}->complete($only_mandatory, $only_property);
         }
     }
 

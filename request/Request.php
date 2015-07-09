@@ -301,7 +301,7 @@ class Request implements IActivate, \ArrayAccess, \Countable
     /**
      * Создание URL на основе текущего.
      * Если не указан ни один параметр, то возвращается URL текущего запроса
-     * @param null|string|array $path Путь uri. Если не указан, то используется текущий путь
+     * @param null|string $path Путь uri. Если не указан, то используется текущий путь
      * @param array $args Массив аргументов.
      * @param bool $append Добавлять ли текущие аргументы к новым?
      * @param bool|string $host Добавлять ли адрес сайта. Если true, то добавляет адрес текущего сайта. Можно строкой указать другой сайт

@@ -134,12 +134,14 @@ class Data implements IActivate
         $attr = array_replace([
             'name' => $proto->name(),
             'order' => Entity::MAX_ORDER,
+            'value' => $proto->value(),
             'is_hidden' => $proto->is_hidden(),
             'is_draft' => $proto->is_draft(),
             'is_property' => $proto->is_property()
         ], $attr);
         /** @var $obj Entity */
         $obj = new $class($attr);
+
         // Уникальность имени
         $obj->name(null, true);
         // Установка родителя

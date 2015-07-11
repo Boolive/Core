@@ -18,13 +18,15 @@
  */
 namespace boolive\core\database;
 
+use boolive\core\config\Config;
+use boolive\core\IActivate;
 use PDO;
 use PDOStatement;
 use boolive\core\errors\Error;
 use boolive\core\develop\Trace;
 use boolive\core\develop\Benchmark;
 
-class DB extends PDO
+class DB extends PDO implements IActivate
 {
     /** @var array Установленные соединения */
     static private $connection = [];
@@ -36,6 +38,14 @@ class DB extends PDO
     private $trace_sql = false;
     private $trace_count = false;
     private $slow_query = 0;
+    static private $default_connection;
+
+    static function activate()
+    {
+        $config = Config::read('db');
+        self::$default_connection = self::connect($config);
+    }
+
 
     /**
      * Создание экземпляра DB, представляющего соединение с базой данных
@@ -81,8 +91,9 @@ class DB extends PDO
                 self::$connection[$key] = new self($dsn, $config['user'], $config['password'], $config['options'], $config['prefix'], $config['trace_sql'], $config['trace_count'], $config['slow_query']);
             }
             return self::$connection[$key];
+        }else{
+            return self::$default_connection;
         }
-        return null;
     }
 
     function __construct($dsn, $username = null, $passwd = null, $options = [], $prefix = '', $debug = false, $count = false, $slow = 0)

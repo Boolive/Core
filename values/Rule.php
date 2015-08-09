@@ -13,12 +13,12 @@ namespace boolive\core\values;
 /**
  * Стандартные фильтры к правилу.
  * Методы создания правила с указанием первого фильтра.
- * @method static \boolive\core\values\Rule bool($value) Булево: false, 'false', 'off', 'no', '', '0' => false, иначе true
- * @method static \boolive\core\values\Rule int($value) Целое число в диапазоне от -2147483648 до 2147483647
- * @method static \boolive\core\values\Rule double($value) Действительное число в диапазоне от -1.7976931348623157E+308 до 1.7976931348623157E+308
- * @method static \boolive\core\values\Rule string($value) Строка любой длины
- * @method static \boolive\core\values\Rule scalar($value) Строка, число, булево
- * @method static \boolive\core\values\Rule null($value) Неопределенное значение. При этом проверяемый элемент должен существовать!
+ * @method static \boolive\core\values\Rule bool() Булево: false, 'false', 'off', 'no', '', '0' => false, иначе true
+ * @method static \boolive\core\values\Rule int() Целое число в диапазоне от -2147483648 до 2147483647
+ * @method static \boolive\core\values\Rule double() Действительное число в диапазоне от -1.7976931348623157E+308 до 1.7976931348623157E+308
+ * @method static \boolive\core\values\Rule string() Строка любой длины
+ * @method static \boolive\core\values\Rule scalar() Строка, число, булево
+ * @method static \boolive\core\values\Rule null() Неопределенное значение. При этом проверяемый элемент должен существовать!
  * @method static \boolive\core\values\Rule arrays($rules) Массив
  * @method static \boolive\core\values\Rule object($class) Объект указываемого класса
  * @method static \boolive\core\values\Rule entity($cond = null) Объект класса \boolive\core\data\Entity или URI объекта, который можно получить из БД. В аргументе фильтра указывается условие на объект в виде массива.
@@ -29,18 +29,18 @@ namespace boolive\core\values;
  * @method static \boolive\core\values\Rule not($value) Не равен указанному значению
  * @method static \boolive\core\values\Rule in($values) Допустимые значения. Через запятую или массив
  * @method static \boolive\core\values\Rule not_in($values) Недопустимые значения. Через запятую или массив
- * @method static \boolive\core\values\Rule escape($value) Экранирование html символов
- * @method static \boolive\core\values\Rule striptags($value) Вырезание html тегов
- * @method static \boolive\core\values\Rule email($value) Email адрес
- * @method static \boolive\core\values\Rule url($value) URL
- * @method static \boolive\core\values\Rule uri($value) URI = URL + URN, возможно отсутсвие части URL или URN
+ * @method static \boolive\core\values\Rule escape() Экранирование html символов
+ * @method static \boolive\core\values\Rule striptags($tags) Вырезание html тегов
+ * @method static \boolive\core\values\Rule email() Email адрес
+ * @method static \boolive\core\values\Rule url() URL
+ * @method static \boolive\core\values\Rule uri() URI = URL + URN, возможно отсутсвие части URL или URN
  * @method static \boolive\core\values\Rule ip($value) IP
  * @method static \boolive\core\values\Rule regexp($patterns) Проверка на совпадение одному из регулярных выражений. Выражения через запятую или массив
  * @method static \boolive\core\values\Rule ospatterns($patterns) Проверка на совпадения одному из паттернов в стиле оболочки операционной системы: "*gr[ae]y". Паттерны запятую или массив
- * @method static \boolive\core\values\Rule color($value) HEX формат числа. Код цвета #FFFFFF. Возможны сокращения и опущение #
- * @method static \boolive\core\values\Rule lowercase($value) Преобразует строку в нижний регистр
- * @method static \boolive\core\values\Rule uppercase($value) Преобразует строку в верхний регистр
- * @method static \boolive\core\values\Rule condition($value) Условие поиска или валидации объекта
+ * @method static \boolive\core\values\Rule color() HEX формат числа. Код цвета #FFFFFF. Возможны сокращения и опущение #
+ * @method static \boolive\core\values\Rule lowercase() Преобразует строку в нижний регистр
+ * @method static \boolive\core\values\Rule uppercase() Преобразует строку в верхний регистр
+ * @method static \boolive\core\values\Rule condition() Условие поиска или валидации объекта
  *
  * Методы добавления фильтра к объекту правила.
  * @method \boolive\core\values\Rule max($max) Максимальное значение. Правая граница отрезка. Максимальный размер массива
@@ -54,20 +54,20 @@ namespace boolive\core\values;
  * @method \boolive\core\values\Rule required() Должен существовать
  * @method \boolive\core\values\Rule default($value) Значение по умолчанию, если есть ошибки. Ошибка удаляется
  * @method \boolive\core\values\Rule ignore($rule_names) Коды игнорируемых ошибок
- * @method \boolive\core\values\Rule trim($value) Обрезание строки
- * @method \boolive\core\values\Rule escape($value) Экранирование html символов
- * @method \boolive\core\values\Rule striptags($value) Вырезание html тегов
- * @method \boolive\core\values\Rule email($value) Email адрес
- * @method \boolive\core\values\Rule url($value) URL
- * @method \boolive\core\values\Rule uri($value) URI = URL + URN, возможно отсутсвие части URL или URN
- * @method \boolive\core\values\Rule ip($value) IP
+ * @method \boolive\core\values\Rule trim() Обрезание строки
+ * @method \boolive\core\values\Rule escape() Экранирование html символов
+ * @method \boolive\core\values\Rule striptags($tags) Вырезание html тегов
+ * @method \boolive\core\values\Rule email() Email адрес
+ * @method \boolive\core\values\Rule url() URL
+ * @method \boolive\core\values\Rule uri() URI = URL + URN, возможно отсутсвие части URL или URN
+ * @method \boolive\core\values\Rule ip() IP
  * @method \boolive\core\values\Rule regexp($patterns) Проверка на совпадение одному из регулярных выражений. Выражения через запятую или массив
  * @method \boolive\core\values\Rule ospatterns($patterns) Проверка на совпадения одному из паттернов в стиле оболочки операционной системы: "*gr[ae]y". Паттерны запятую или массив
- * @method \boolive\core\values\Rule color($value) HEX формат числа. Код цвета #FFFFFF. Возможны сокращения и опущение #
- * @method \boolive\core\values\Rule file_upload($file_info) Информация о загружаемом файле в виде массива
- * @method \boolive\core\values\Rule lowercase($value) Преобразует строку в нижний регистр
- * @method \boolive\core\values\Rule uppercase($value) Преобразует строку в верхний регистр
- * @method \boolive\core\values\Rule condition($value) Условие поиска или валидации объекта
+ * @method \boolive\core\values\Rule color() HEX формат числа. Код цвета #FFFFFF. Возможны сокращения и опущение #
+ * @method \boolive\core\values\Rule file_upload() Информация о загружаемом файле в виде массива
+ * @method \boolive\core\values\Rule lowercase() Преобразует строку в нижний регистр
+ * @method \boolive\core\values\Rule uppercase() Преобразует строку в верхний регистр
+ * @method \boolive\core\values\Rule condition() Условие поиска или валидации объекта
  */
 class Rule
 {

@@ -1231,6 +1231,9 @@ class Entity
         // Прототипирование отсутствующих подчиненных
         foreach ($props_children as $name => $child){
             $this->{$name}->complete($only_mandatory, $only_property);
+            if ($this->{$name}->order() == Entity::MAX_ORDER){
+                $this->{$name}->order($props_children[$name]->order());
+            }
         }
     }
 

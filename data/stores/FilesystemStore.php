@@ -37,6 +37,10 @@ class FilesystemStore implements IStore
                         // Чтение информации об объекте
                         $info = file_get_contents($file);
                         $info = json_decode($info, true);
+                        $error = json_last_error();
+                        if ($error != JSON_ERROR_NONE) {
+                            $info = [];
+                        }
                         $info['uri'] = $uri;
                         if (!empty($info['file'])){
                             $info['is_default_file'] = false;
@@ -133,8 +137,10 @@ class FilesystemStore implements IStore
                                                     // Все сведения об объекте в формате json (если нет класса объекта)
                                                     $f = file_get_contents($file->getPathname());
                                                     $info = json_decode($f, true);
-                                                    if ($error = json_last_error()) {
-                                                        throw new \Exception('Ошибка в "' . $curr['dir'] . $name . '"');
+                                                    $error = json_last_error();
+                                                    if ($error != JSON_ERROR_NONE) {
+                                                        $info = [];
+//                                                        throw new \Exception('Ошибка в "' . $curr['dir'] . $name . '"');
                                                     }
                                                     $info['uri'] = $uri;
                                                     if (!empty($info['file'])) {

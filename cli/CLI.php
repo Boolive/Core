@@ -6,6 +6,8 @@
  */
 namespace boolive\core\cli;
 
+use boolive\core\config\Config;
+
 class CLI
 {
     const STYLE_BOLD = '1';
@@ -122,4 +124,19 @@ class CLI
         self::$is_ansicon = $use;
     }
 
+    /**
+     * Исполнение php скрипта в командной строке
+     * @param string $command Команда - запускаемый скрипт с аргументами
+     * @param bool $background_mode Признак, запускать в фоновом режиме. По умолчанию нет
+     */
+    static function run_php($command, $background_mode = false)
+    {
+        $config = Config::read('core');
+        $php = empty($config['php'])?'php':$config['php'];
+        if (substr(php_uname(), 0, 7) == "Windows"){
+            pclose(popen('start'.($background_mode?' /B ':' ').$php.' '.$command, "r"));
+        }else{
+            exec($php.' '.$command.($background_mode?" > /dev/null &":''));
+        }
+    }
 }

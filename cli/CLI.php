@@ -42,6 +42,7 @@ class CLI
     static private $is_ansicon = null;
     static private $stdin;
     static private $stdout;
+    static private $running_commands = [];
 
     static function get_stdin()
     {
@@ -128,15 +129,33 @@ class CLI
      * Исполнение php скрипта в командной строке
      * @param string $command Команда - запускаемый скрипт с аргументами
      * @param bool $background_mode Признак, запускать в фоновом режиме. По умолчанию нет
+     * @param bool $ignore_duplicates Признак, игнорировать дубликаты
      */
-    static function run_php($command, $background_mode = false)
+    static function run_php($command, $background_mode = false, $ignore_duplicates = true)
     {
-        $config = Config::read('core');
-        $php = empty($config['php'])?'php':$config['php'];
-        if (substr(php_uname(), 0, 7) == "Windows"){
-            pclose(popen('start'.($background_mode?' /B ':' ').$php.' '.$command, "r"));
-        }else{
-            exec($php.' '.$command.($background_mode?" > /dev/null &":''));
+        if (!$ignore_duplicates || empty(self::$running_commands[$command])) {
+            $config = Config::read('core');
+            $php = empty($config['php']) ? 'php' : $config['php'];
+            if (substr(php_uname(), 0, 7) == "Windows") {
+                pclose(popen('start' . ($background_mode ? ' /B ' : ' ') . $php . ' ' . $command, "r"));
+            } else {
+                exec($php . ' ' . $command . ($background_mode ? " > /dev/null &" : ''));
+            }
+        }
+        self::$running_commands[$command] = true;
+    }
+
+    /**
+     * Удаления признака, что команда была запущена
+     * @param null $command Команда. Если null, то удаляются все команды
+     */
+    static function clear_running_commands($command = null)
+    {
+        if (empty($command)){
+            self::$running_commands = [];
+        }else
+        if (array_key_exists($command, self::$running_commands)){
+            unset(self::$running_commands, $command);
         }
     }
 }

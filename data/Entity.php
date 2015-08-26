@@ -874,13 +874,26 @@ class Entity
             }
         }
         // Проверка родителем.
-//        if ($p = $this->parent()) $p->checkChild($this);
+        if ($p = $this->parent(null,true)){
+            $p->checkChild($this);
+        }
         // Если ошибок нет, то удаляем контейнер для них
         if (!$this->errors()->isExist()){
             //$errors = null;
             return $this->_checked = true;
         }
         return false;
+    }
+
+    /**
+        * Проверка подчиненного в рамках его родителей
+        * Возможно обращение к родителям выше уровнем, чтобы объект проверялся в ещё более глобальном окружении,
+        * например для проверки уникальности значения по всему разделу/базе.
+        * @param Entity $child Проверяемый подчиненный
+        * @return bool Признак, корректен объект (true) или нет (false)
+    */
+    protected function checkChild(Entity $child){
+        return true;
     }
 
     /**

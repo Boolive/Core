@@ -110,9 +110,22 @@ class Data implements IActivate
         }
     }
 
-    static function delete()
+    /**
+     * Удаление объекта
+     * @param Entity $entity
+     * @return bool
+     */
+    static function delete($entity)
     {
-
+        if ($entity->is_exists()){
+            if ($store = self::getStore($entity->uri())) {
+                return $store->delete($entity);
+            }else{
+                throw new Error('Неопределено хранилище объекта','store');
+            }
+        }else{
+            return false;
+        }
     }
 
     /**

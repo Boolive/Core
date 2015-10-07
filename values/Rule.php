@@ -18,6 +18,7 @@ namespace boolive\core\values;
  * @method static \boolive\core\values\Rule double() Действительное число в диапазоне от -1.7976931348623157E+308 до 1.7976931348623157E+308
  * @method static \boolive\core\values\Rule string() Строка любой длины
  * @method static \boolive\core\values\Rule scalar() Строка, число, булево
+ * @method static \boolive\core\values\Rule date() дата-время
  * @method static \boolive\core\values\Rule null() Неопределенное значение. При этом проверяемый элемент должен существовать!
  * @method static \boolive\core\values\Rule arrays($rules) Массив
  * @method static \boolive\core\values\Rule object($class) Объект указываемого класса

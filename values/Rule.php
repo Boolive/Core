@@ -24,7 +24,7 @@ namespace boolive\core\values;
  * @method static \boolive\core\values\Rule object($class) Объект указываемого класса
  * @method static \boolive\core\values\Rule entity($cond = null) Объект класса \boolive\core\data\Entity или URI объекта, который можно получить из БД. В аргументе фильтра указывается условие на объект в виде массива.
  * @method static \boolive\core\values\Rule values() Объект класса \boolive\core\values\Values
- * @method static \boolive\core\values\Rule any($rules) Любое правило из перечисленных или любой тип значения, если не перечислены варианты правил
+ * @method static \boolive\core\values\Rule any(...$rules) Любое правило из перечисленных или любой тип значения, если не перечислены варианты правил
  * @method static \boolive\core\values\Rule forbidden() Запрещенный. Требуется отсутствие элемента
  * @method static \boolive\core\values\Rule eq($value) Равен указанному значению
  * @method static \boolive\core\values\Rule not($value) Не равен указанному значению

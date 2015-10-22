@@ -22,7 +22,7 @@ class Data implements IActivate
     static function activate()
     {
         // Конфиг хранилищ
-        self::$config = Config::read('stores');
+        self::$config = array_reverse(Config::read('stores'), true);
     }
 
     /**

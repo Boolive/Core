@@ -13,7 +13,7 @@ use boolive\core\database\DB;
 use boolive\core\data\Buffer;
 
 
-class MySQLStore implements IStore
+class MySQLStore2 implements IStore
 {
     private $db = false;
 

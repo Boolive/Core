@@ -150,7 +150,8 @@ class Data implements IActivate
             'value' => $proto->value(),
             'is_hidden' => $proto->is_hidden(),
             'is_draft' => $proto->is_draft(),
-            'is_property' => $proto->is_property()
+            'is_property' => $proto->is_property(),
+            'created' => time()
         ], $attr);
         /** @var $obj Entity */
         $obj = new $class($attr);
@@ -558,5 +559,37 @@ class Data implements IActivate
             }
         }
         return null;
+    }
+
+    /**
+     * Загрузка файла в директорию объекта
+     * @param Entity $entity
+     * @param array $file Инфо о файла в формате $_FILES
+     * @return null|string Имя файла
+     */
+    static function save_file($entity, $file)
+    {
+        // Обработка файла у объекта и его свойств
+        $f = File::fileInfo($file['tmp_name']);
+        $name = ($f['back'] ? '../' : '') . $entity->name();
+        // расширение
+        if (empty($file['name'])) {
+            if ($f['ext']) $name .= '.' . $f['ext'];
+        } else {
+            $f = File::fileInfo($file['name']);
+            if ($f['ext']) $name .= '.' . $f['ext'];
+        }
+        //
+        $path = $entity->dir(true) . $name;
+        if ($file['tmp_name'] != $path) {
+            if (!File::upload($file['tmp_name'], $path)) {
+                // @todo Проверить безопасность?
+                // Копирование, если объект-файл создаётся из уже имеющихся на сервере файлов, например при импорте каталога
+                if (!File::copy($file['tmp_name'], $path)) {
+                    $name = null;
+                }
+            }
+        }
+        return $name;
     }
 }

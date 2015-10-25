@@ -747,6 +747,7 @@ class Entity
         foreach ($this->_children as $child_name => $child){
             /* @var Entity $child */
             $child->_attributes['uri'] = $this->_attributes['uri'].'/'.$child_name;
+            $child->_attributes['parent'] = $this->_attributes['uri'];
             $child->updateChildrenUri();
         }
     }

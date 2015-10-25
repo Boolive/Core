@@ -346,28 +346,7 @@ class FilesystemStore implements IStore
 
             // Новые сведения об объекте
             $info_new = $this->export($entity, isset($info['properties']) ? $info['properties'] : [], function (Entity $entity, $file) {
-                // Обработка файла у объекта и его свойств
-                $f = File::fileInfo($file['tmp_name']);
-                $name = ($f['back'] ? '../' : '') . $entity->name();
-                // расширение
-                if (empty($file['name'])) {
-                    if ($f['ext']) $name .= '.' . $f['ext'];
-                } else {
-                    $f = File::fileInfo($file['name']);
-                    if ($f['ext']) $name .= '.' . $f['ext'];
-                }
-                //
-                $path = $entity->dir(true) . $name;
-                if ($file['tmp_name'] != $path) {
-                    if (!File::upload($file['tmp_name'], $path)) {
-                        // @todo Проверить безопасность?
-                        // Копирование, если объект-файл создаётся из уже имеющихся на сервере файлов, например при импорте каталога
-                        if (!File::copy($file['tmp_name'], $path)) {
-                            $name = null;
-                        }
-                    }
-                }
-                return $name;
+                return Data::save_file($entity, $file);
             });
 
             // Порядковый номер

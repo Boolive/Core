@@ -628,6 +628,38 @@ class MySQLStore implements IStore
                     PRIMARY KEY (`id`)
                 ) ENGINE=MYISAM DEFAULT CHARSET=utf8 COMMENT='Текстовые значения объектов'
             ");
+            $db->exec("
+                CREATE TABLE `parents1` (
+                  `id` INT(10) UNSIGNED NOT NULL,
+                  `id1` INT(10) UNSIGNED NOT NULL,
+                  `id2` INT(10) UNSIGNED NOT NULL,
+                  `id3` INT(10) UNSIGNED NOT NULL,
+                  `id4` INT(10) UNSIGNED NOT NULL,
+                  `id5` INT(10) UNSIGNED NOT NULL,
+                  `id6` INT(10) UNSIGNED NOT NULL,
+                  `id7` INT(10) UNSIGNED NOT NULL,
+                  `id8` INT(10) UNSIGNED NOT NULL,
+                  `id9` INT(10) UNSIGNED NOT NULL,
+                  `id10` INT(10) UNSIGNED NOT NULL,
+                  PRIMARY KEY (`id`)
+                ) ENGINE=INNODB DEFAULT CHARSET=utf8
+            ");
+            $db->exec("
+                CREATE TABLE `protos1` (
+                  `id` INT(10) UNSIGNED NOT NULL,
+                  `id1` INT(10) UNSIGNED NOT NULL,
+                  `id2` INT(10) UNSIGNED NOT NULL,
+                  `id3` INT(10) UNSIGNED NOT NULL,
+                  `id4` INT(10) UNSIGNED NOT NULL,
+                  `id5` INT(10) UNSIGNED NOT NULL,
+                  `id6` INT(10) UNSIGNED NOT NULL,
+                  `id7` INT(10) UNSIGNED NOT NULL,
+                  `id8` INT(10) UNSIGNED NOT NULL,
+                  `id9` INT(10) UNSIGNED NOT NULL,
+                  `id10` INT(10) UNSIGNED NOT NULL,
+                  PRIMARY KEY (`id`)
+                ) ENGINE=INNODB DEFAULT CHARSET=utf8
+            ");
 //        }catch (\PDOException $e){
 //			// Ошибки подключения к СУБД
 //			if ($e->getCode() == '1045'){

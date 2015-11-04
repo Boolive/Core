@@ -30,8 +30,10 @@ class FilesystemStore implements IStore
                 try {
                     if ($uri === '') {
                         $file = DIR . 'project.info';
+                        $dir = DIR;
                     } else {
                         $file = DIR . trim($uri, '/') . '/' . File::fileName($uri) . '.info';
+                        $dir = DIR . trim($uri, '/');
                     }
                     if (is_file($file)) {
                         // Чтение информации об объекте
@@ -53,6 +55,13 @@ class FilesystemStore implements IStore
                         if (!isset($info['is_default_logic'])) $info['is_default_logic'] = true;
                         $info['is_exists'] = true;
                         // Инфо о свойствах в буфер
+                        $info = Buffer::set_info($info);
+                    }else
+                    if (is_dir($dir)){
+                        $info = [
+                            'uri' => $uri,
+                            'is_exists' => true
+                        ];
                         $info = Buffer::set_info($info);
                     }
                 } catch (\Exception $e) {

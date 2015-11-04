@@ -355,6 +355,14 @@ class F
         return array_keys($result);
     }
 
+    static function array_clear($array)
+    {
+        foreach ($array as $key => $value){
+            if (!$value) unset($array[$key]);
+        }
+        return $array;
+    }
+
     static function isAssoc($array)
     {
         return array_keys($array) !== range(0, count($array) - 1);

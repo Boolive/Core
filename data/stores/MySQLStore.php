@@ -23,10 +23,17 @@ class MySQLStore implements IStore
     public $db;
     /** @var string Ключ хранилища, по которому хранилище выбирается для объектов и создаются короткие URI */
     private $key;
-    /** @var array Хэш uri => id */
+    /** @var array Хэш uri => id Идентфиикатор объекта в хранилище*/
     private $_local_ids = [];
-    /** @var array Хэш id => uri */
+    /** @var array Хэш id => [] Идентфикаторы родителей */
+    private $_parents_ids =[];
+    /** @var array Хэш id => [] Идентификаторы прототипов */
+    private $_protos_ids =[];
+    /** @var array Хэш id => uri  */
     private $_global_ids = [];
+
+    private $_parents_queue = [];
+    private $_protos_queue = [];
 
     /**
      * Конструктор экземпляра хранилища
@@ -138,6 +145,14 @@ class MySQLStore implements IStore
      */
     function write($entity)
     {
+
+        // @todo
+        // Для нового объекта нужны id всех родителей и всех прототипов, чтобы их прописать в таблицу иерархических отношений
+        // Смена родителя/прототипа требует соответсвующие сдвиги в таблице отношений
+        // При смене uri нужно обновить uri подчиненных
+        // Для создания локального идентификатора нужно оперировать сущностью, чтобы сделать запись и в таблицы отношений
+
+
         $attr = $entity->attributes();
         // Локальные id
         $attr['parent'] = isset($attr['parent']) ? $this->localId($attr['parent']) : 0;
@@ -160,6 +175,8 @@ class MySQLStore implements IStore
             $entity->name($attr['name']);
             $attr['uri'] = $entity->uri();
         }
+
+        Buffer::set_entity($entity);
 
         // Локальный идентификатор объекта
         $attr['id'] = $this->localId($entity->uri($entity->is_exists()), true, $new_id);
@@ -232,6 +249,7 @@ class MySQLStore implements IStore
                 $entity->change('uri', $uri_new);
 
                 // @todo Обновление URI подчиенных в базе
+                // нужно знать текущий уковень вложенности и локальный id
 
                 //
     //            $q = $this->db->prepare('UPDATE {ids}, {parents} SET {ids}.uri = CONCAT(?, SUBSTRING(uri, ?)) WHERE {parents}.parent_id = ? AND {parents}.object_id = {ids}.id AND {parents}.is_delete=0');
@@ -314,8 +332,8 @@ class MySQLStore implements IStore
             $q->bindValue(++$i, $attr['id']);
             $q->execute();
         }
-        $this->db->commit();
 
+        $this->db->commit();
 
         foreach ($entity->children() as $child){
             Data::write($child);
@@ -376,6 +394,46 @@ class MySQLStore implements IStore
         return $result;
     }
 
+    private function makeParents($id, $parent_id)
+    {
+        if ($parent_id) {
+            if (!isset($this->_parents_ids[$parent_id])){
+                $this->_parents_queue[$parent_id][] = $id;
+            }else {
+                $ids = $this->_parents_ids[$parent_id];
+            }
+        }else {
+            $ids = [];
+        }
+        if (isset($ids)) {
+            $ids['id'] = $id;
+            $ids['id' . count($ids)] = $id;
+            $this->_parents_ids[$id] = $ids;
+            $names = array_keys($ids);
+            $this->db->exec('INSERT INTO {parents1} (`' . implode('`, `', $names) . '`) VALUES (' . implode(',', $ids) . ')');
+        }
+    }
+
+    private function makeProtos($id, $proto_id)
+    {
+        if ($proto_id) {
+            if (!isset($this->_protos_ids[$proto_id])){
+                $this->_protos_queue[$proto_id][] = $id;
+            }else {
+                $ids = $this->_protos_ids[$proto_id];
+            }
+        }else {
+            $ids = [];
+        }
+        if (isset($ids)) {
+            $ids['id'] = $id;
+            $ids['id' . count($ids)] = $id;
+            $this->_protos_ids[$id] = $ids;
+            $names = array_keys($ids);
+            $this->db->exec('INSERT INTO {protos1} (`' . implode('`, `', $names) . '`) VALUES (' . implode(',', $ids) . ')');
+        }
+    }
+
     /**
      * Создание идентификатора для указанного URI.
      * Если объект с указанным URI существует, то будет возвращен его идентификатор
@@ -407,6 +465,18 @@ class MySQLStore implements IStore
             $is_new = false;
             $this->_local_ids[$uri] = $id;
             $this->_global_ids[$id] = $uri;
+            // Отношение с родителями
+            $q =  $this->db->prepare('SELECT * FROM {parents1} WHERE `id`=? LIMIT 0,1');
+            $q->execute(array($id));
+            if ($row = $q->fetch(DB::FETCH_ASSOC)){
+                $this->_parents_ids[$id] = F::array_clear($row);
+            }
+            // Отношение с прототипами
+            $q =  $this->db->prepare('SELECT * FROM {protos1} WHERE `id`=? LIMIT 0,1');
+            $q->execute(array($id));
+            if ($row = $q->fetch(DB::FETCH_ASSOC)){
+                $this->_protos_ids[$id] = F::array_clear($row);
+            }
         }else
         if ($create){
             // Создание идентификатора для URI
@@ -414,6 +484,20 @@ class MySQLStore implements IStore
             $q->execute([$uri]);
             $id = $this->db->lastInsertId('id');
             $is_new = true;
+            $obj = Data::read($uri);
+            // Отношения с родителями
+            $this->makeParents($id, $this->localId($obj->parent()));
+            // Отношения с прототипами
+            $this->makeProtos($id, $this->localId($obj->proto()));
+
+            if (isset($this->_parents_queue[$id])){
+                foreach ($this->_parents_queue[$id] as $child_id) $this->makeParents($child_id, $id);
+                unset($this->_parents_queue[$id]);
+            }
+            if (isset($this->_protos_queue[$id])){
+                foreach ($this->_protos_queue[$id] as $heir_id) $this->makeProtos($heir_id, $id);
+                unset($this->_protos_queue[$id]);
+            }
         }else{
             return 0;
         }

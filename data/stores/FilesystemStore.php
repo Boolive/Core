@@ -56,14 +56,15 @@ class FilesystemStore implements IStore
                         $info['is_exists'] = true;
                         // Инфо о свойствах в буфер
                         $info = Buffer::set_info($info);
-                    }else
-                    if (is_dir($dir)){
-                        $info = [
-                            'uri' => $uri,
-                            'is_exists' => true
-                        ];
-                        $info = Buffer::set_info($info);
                     }
+//                    else
+//                    if (is_dir($dir)){
+//                        $info = [
+//                            'uri' => $uri,
+//                            'is_exists' => true
+//                        ];
+//                        $info = Buffer::set_info($info);
+//                    }
                 } catch (\Exception $e) {
                     return false;
                 }

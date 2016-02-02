@@ -265,6 +265,9 @@ class Request implements IActivate, \ArrayAccess, \Countable
      */
     function getErrors()
     {
+        if (!$this->errors){
+            $this->errors = new Error('Ошибки', 'errors', null, true);
+        }
         return $this->errors;
     }
 

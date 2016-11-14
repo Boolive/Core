@@ -551,7 +551,7 @@ class Data implements IActivate
     {
         if (is_array($uri)) $uri = reset($uri);
         foreach (self::$config as $key => $config){
-            if ($key == '' || mb_strpos($uri, $key) === 0){
+            if ($key === '' || mb_strpos($uri, $key.'/') === 0){
                 if (!isset(self::$stores[$key])){
                     self::$stores[$key] = new $config['class']($key, $config['params']);
                 }

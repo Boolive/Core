@@ -147,11 +147,8 @@ class MySQLStore implements IStore
     {
 
         // @todo
-        // Для нового объекта нужны id всех родителей и всех прототипов, чтобы их прописать в таблицу иерархических отношений
         // Смена родителя/прототипа требует соответсвующие сдвиги в таблице отношений
         // При смене uri нужно обновить uri подчиненных
-        // Для создания локального идентификатора нужно оперировать сущностью, чтобы сделать запись и в таблицы отношений
-
 
         $attr = $entity->attributes();
         // Локальные id
@@ -412,6 +409,10 @@ class MySQLStore implements IStore
             $names = array_keys($ids);
             $this->db->exec('INSERT INTO {parents1} (`' . implode('`, `', $names) . '`) VALUES (' . implode(',', $ids) . ')');
         }
+        if (isset($this->_parents_queue[$id])){
+            foreach ($this->_parents_queue[$id] as $child_id) $this->makeParents($child_id, $id);
+            unset($this->_parents_queue[$id]);
+        }
     }
 
     private function makeProtos($id, $proto_id)
@@ -431,6 +432,10 @@ class MySQLStore implements IStore
             $this->_protos_ids[$id] = $ids;
             $names = array_keys($ids);
             $this->db->exec('INSERT INTO {protos1} (`' . implode('`, `', $names) . '`) VALUES (' . implode(',', $ids) . ')');
+        }
+        if (isset($this->_protos_queue[$id])){
+            foreach ($this->_protos_queue[$id] as $heir_id) $this->makeProtos($heir_id, $id);
+            unset($this->_protos_queue[$id]);
         }
     }
 
@@ -489,15 +494,6 @@ class MySQLStore implements IStore
             $this->makeParents($id, $this->localId($obj->parent()));
             // Отношения с прототипами
             $this->makeProtos($id, $this->localId($obj->proto()));
-
-            if (isset($this->_parents_queue[$id])){
-                foreach ($this->_parents_queue[$id] as $child_id) $this->makeParents($child_id, $id);
-                unset($this->_parents_queue[$id]);
-            }
-            if (isset($this->_protos_queue[$id])){
-                foreach ($this->_protos_queue[$id] as $heir_id) $this->makeProtos($heir_id, $id);
-                unset($this->_protos_queue[$id]);
-            }
         }else{
             return 0;
         }
